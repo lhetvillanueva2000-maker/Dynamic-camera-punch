@@ -1,0 +1,151 @@
+/* ============================================================================
+   theme.css — design tokens, reset, typography
+   Dark is the default theme; [data-theme="light"] only re-declares the tokens
+   that actually change, so every component stays theme-agnostic.
+   ========================================================================== */
+
+:root {
+  /* ── Surfaces ── */
+  --bg:            #08080a;
+  --bg-elev:       #121216;
+  --bg-elev-2:     #1a1a20;
+  --line:          #26262e;
+  --line-soft:     #1e1e25;
+
+  /* ── Text ── */
+  --text:          #f4f4f6;
+  --text-dim:      #a0a0ad;
+  --text-faint:    #6b6b78;
+
+  /* ── Accents ── */
+  --accent:        #0a84ff;
+  --green:         #30d158;
+  --red:           #ff453a;
+  --orange:        #ff9f0a;
+  --yellow:        #ffd60a;
+  --purple:        #bf5af2;
+  --pink:          #ff375f;
+  --teal:          #40c8e0;
+
+  /* ── The island ──
+     Kept as tokens so a whole re-skin is a handful of lines.              */
+  --island-bg:            #000;
+  --island-ring:          rgba(255, 255, 255, .07);
+  --island-shadow:        0 12px 34px rgba(0, 0, 0, .55);
+
+  /* Idle cutout geometry, per variant */
+  --cut-a-w:  86px;   /* variant A: pill welded to the bezel  */
+  --cut-a-h:  27px;
+  --cut-b-w:  30px;   /* variant B: free-floating lens         */
+  --cut-b-h:  30px;
+
+  /* Presentation geometry */
+  --island-compact-h:   37px;
+  --island-alert-h:     44px;
+  --island-expanded-w:  min(340px, calc(100% - 28px));
+  --island-top:         11px;   /* animated per state by island.js */
+  --sat-size:           30px;
+  --sat-gap:            9px;
+  --di-gap:             46px;   /* dead zone the compact row leaves for the lens */
+
+  /* ── Motion ──
+     `--ease-island` is Apple's own morph curve: a very fast departure that
+     glides to a stop. `--ease-spring` adds the small overshoot used for
+     content pop-in.                                                       */
+  --ease-island:  cubic-bezier(.32, .72, 0, 1);
+  --ease-spring:  cubic-bezier(.34, 1.56, .64, 1);
+  --ease-out:     cubic-bezier(.22, 1, .36, 1);
+  --dur-morph:    560ms;
+  --dur-content:  260ms;
+
+  /* ── Layout ── */
+  --radius:      16px;
+  --radius-sm:   11px;
+  --phone-w:     390px;
+  --phone-h:     820px;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter,
+          Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+[data-theme="light"] {
+  --bg:        #f2f2f6;
+  --bg-elev:   #ffffff;
+  --bg-elev-2: #f6f6fa;
+  --line:      #dededf;
+  --line-soft: #e9e9ee;
+  --text:      #15151a;
+  --text-dim:  #61616c;
+  --text-faint:#8e8e98;
+  --accent:    #0071e3;
+  --island-shadow: 0 12px 30px rgba(0, 0, 0, .28);
+}
+
+/* ── Reset ───────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden;
+  transition: background .3s var(--ease-out), color .3s var(--ease-out);
+}
+
+/* Everything in this demo is a direct-manipulation surface: kill the mobile
+   tap flash, the text selection and the double-tap zoom. */
+body, .phone, .island, .btn {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+h1, h2, h3, p, ul { margin: 0; }
+ul { padding: 0; list-style: none; }
+button { font: inherit; color: inherit; }
+
+kbd {
+  font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 3px 5px;
+  margin-right: 2px;
+}
+
+code {
+  font: 500 12px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: var(--bg-elev-2);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.svg-defs { position: absolute; width: 0; height: 0; pointer-events: none; }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+/* Honour the OS reduced-motion setting: the island still changes state, it
+   just snaps instead of morphing. */
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-morph: 1ms; --dur-content: 1ms; }
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#08080a">
+<meta name="description" content="Dynamic Island clone for the web with two Android-style camera punch-hole variants.">
+<title>Dynamic Camera Punch — Dynamic Island clone</title>
+<link rel="icon" href="assets/logo.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/logo.svg">
+<link rel="stylesheet" href="css/theme.css">
+<link rel="stylesheet" href="css/phone.css">
+<link rel="stylesheet" href="css/island.css">
+<link rel="stylesheet" href="css/demo.css">
+</head>
+<body>
+
+<!--
+  Gooey / "metaball" filter.
+  The island is drawn twice: an invisible-content BLOB layer that runs through this
+  filter, and a crisp SURFACE layer on top that carries the real content.
+  Blurring the blobs and then slamming the alpha channel back to a hard edge
+  (feColorMatrix row 4) makes two nearby black shapes fuse with a liquid bridge —
+  the same visual trick iOS uses when the minimal indicator detaches from the pill.
+-->
+<svg class="svg-defs" aria-hidden="true" focusable="false">
+  <defs>
+    <filter id="di-goo" x="-30%" y="-60%" width="160%" height="220%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="7" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" result="goo"
+        values="1 0 0 0 0
+                0 1 0 0 0
+                0 0 1 0 0
+                0 0 0 26 -12"/>
+    </filter>
+  </defs>
+</svg>
+
+<header class="topbar">
+  <div class="topbar__brand">
+    <img class="topbar__logo" src="assets/logo.svg" width="40" height="40" alt="">
+    <div>
+      <h1>Dynamic Camera Punch</h1>
+      <p>iPhone Dynamic Island behaviour, Android punch-hole geometry.</p>
+    </div>
+  </div>
+  <div class="topbar__actions">
+    <div class="segmented" role="tablist" aria-label="Demo screen">
+      <button class="segmented__btn is-active" role="tab" data-screen="a" aria-selected="true">Variant A</button>
+      <button class="segmented__btn" role="tab" data-screen="b" aria-selected="false">Variant B</button>
+      <button class="segmented__btn" role="tab" data-screen="both" aria-selected="false">Both</button>
+    </div>
+    <button class="icon-btn" id="theme-toggle" title="Toggle light / dark" aria-label="Toggle light or dark theme">
+      <span data-theme-icon></span>
+    </button>
+  </div>
+</header>
+
+<main class="stage">
+
+  <!-- ── Demo screens ───────────────────────────────────────────────── -->
+  <section class="screens" id="screens" aria-label="Device previews">
+    <!-- phone frames are built by DI.Phone.create() in app.js -->
+  </section>
+
+  <!-- ── Control panel ──────────────────────────────────────────────── -->
+  <aside class="panel" aria-label="Demo controls">
+
+    <div class="panel__status" id="status-readout">
+      <span class="panel__dot" data-live="off"></span>
+      <span id="status-text">Idle — nothing presented</span>
+    </div>
+
+    <nav class="tabs" role="tablist" aria-label="Trigger categories">
+      <button class="tabs__btn is-active" role="tab" data-tab="alerts" aria-selected="true">System alerts</button>
+      <button class="tabs__btn" role="tab" data-tab="activities" aria-selected="false">Live activities</button>
+      <button class="tabs__btn" role="tab" data-tab="how" aria-selected="false">Gestures</button>
+    </nav>
+
+    <div class="tabpanel is-active" data-panel="alerts">
+      <p class="panel__hint">Brief, self-dismissing presentations. They interrupt whatever is on the island and hand it back when they finish.</p>
+      <div class="btn-grid" id="alert-buttons"></div>
+    </div>
+
+    <div class="tabpanel" data-panel="activities">
+      <p class="panel__hint">Persistent and interactive. Up to <strong>two</strong> run at once — the second one detaches as the minimal indicator.</p>
+      <div class="btn-grid" id="activity-buttons"></div>
+      <div class="panel__row">
+        <button class="btn btn--ghost" id="btn-swap">Swap activities</button>
+        <button class="btn btn--ghost" id="btn-expand">Toggle expanded</button>
+        <button class="btn btn--danger" id="btn-clear">Dismiss all</button>
+      </div>
+    </div>
+
+    <div class="tabpanel" data-panel="how">
+      <ul class="howto">
+        <li><b>Tap</b><span>Runs the primary action — play/pause, answer a call, stop a timer.</span></li>
+        <li><b>Touch &amp; hold</b><span>Expands the island into the detailed view. Hold again, tap outside, or swipe up to collapse.</span></li>
+        <li><b>Swipe ←/→</b><span>Switches between two concurrent activities. The pill follows your finger and springs back.</span></li>
+        <li><b>Swipe ↓</b><span>Expands from the compact state.</span></li>
+        <li><b>Keyboard</b><span><kbd>Enter</kbd> tap · <kbd>Space</kbd> expand · <kbd>←</kbd><kbd>→</kbd> swap · <kbd>Esc</kbd> collapse.</span></li>
+      </ul>
+      <p class="panel__hint">The island is a real focusable control with <code>aria-live</code> announcements, so screen readers get every presentation change.</p>
+    </div>
+
+  </aside>
+</main>
+
+<footer class="footer">
+  <span>Variant A — cutout fused to the top bezel · Variant B — free-floating cutout</span>
+  <span>HTML5 · CSS3 · vanilla ES6+ · zero dependencies</span>
+</footer>
+
+<!-- Classic (non-module) scripts on purpose: this page must run straight off the
+     filesystem and from file:///android_asset/ inside the Android WebView, where
+     ES-module fetches are blocked by the null origin. Each file adds one member
+     to the single `DI` namespace. -->
+<script src="js/icons.js"></script>
+<script src="js/spring.js"></script>
+<script src="js/phone.js"></script>
+<script src="js/registry.js"></script>
+<script src="js/island.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

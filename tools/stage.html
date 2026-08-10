@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<title>Dynamic Camera Punch — capture stage</title>
+<link rel="stylesheet" href="../web/css/theme.css">
+<link rel="stylesheet" href="../web/css/phone.css">
+<link rel="stylesheet" href="../web/css/island.css">
+<style>
+/* ---------------------------------------------------------------------------
+   A bare, chrome-free stage holding one phone, driven by a scripted timeline.
+   tools/capture.js records this to produce docs/preview.gif — using the real
+   island rather than a mock-up, so the GIF can never misrepresent the code.
+   Query: ?variant=a|b
+   --------------------------------------------------------------------------- */
+body {
+  margin: 0;
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  background: radial-gradient(120% 90% at 50% 0%, #16121f 0%, #08080a 62%);
+  overflow: hidden;
+}
+.phone__label { display: none; }
+/* The wallpaper grain is static noise — invisible in motion, but it wrecks the
+   GIF's palette and delta compression. Drop it for captures only. */
+.wallpaper::after { display: none; }
+.caption {
+  position: fixed;
+  left: 50%; bottom: 16px;
+  transform: translateX(-50%);
+  font-size: 13px;
+  font-weight: 550;
+  letter-spacing: .01em;
+  color: var(--text-dim);
+  background: rgba(255, 255, 255, .05);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 7px 15px;
+  white-space: nowrap;
+  transition: opacity 260ms var(--ease-out);
+}
+</style>
+</head>
+<body>
+<svg class="svg-defs" aria-hidden="true">
+  <defs>
+    <filter id="di-goo" x="-30%" y="-60%" width="160%" height="220%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="7" result="blur"/>
+      <feColorMatrix in="blur" type="matrix"
+        values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 26 -12"/>
+    </filter>
+  </defs>
+</svg>
+
+<div id="host"></div>
+<div class="caption" id="caption">Idle — just the camera</div>
+
+<script src="../web/js/icons.js"></script>
+<script src="../web/js/spring.js"></script>
+<script src="../web/js/phone.js"></script>
+<script src="../web/js/registry.js"></script>
+<script src="../web/js/island.js"></script>
+<script>
+(function () {
+  'use strict';
+  var q = new URLSearchParams(location.search);
+  var variant = q.get('variant') === 'b' ? 'b' : 'a';
+  var island = new DI.Island(DI.Phone.create(variant, document.getElementById('host'), { label: false }));
+  var cap = document.getElementById('caption');
+
+  function say(text) {
+    cap.style.opacity = 0;
+    setTimeout(function () { cap.textContent = text; cap.style.opacity = 1; }, 200);
+  }
+
+  /* The timeline: [delay ms, caption, action]. capture.js just waits it out. */
+  var TIMELINE = [
+    [ 700, 'Music starts — the cutout morphs into the pill', function () { island.present('music'); }],
+    [2100, 'Touch and hold expands it',                      function () { island.expand(); }],
+    [2600, 'Tap outside to collapse',                        function () { island.collapse(); }],
+    [1500, 'A timer joins — second activity detaches',       function () { island.present('timer'); }],
+    [2200, 'Swipe to swap the two activities',               function () { island.swap('left'); }],
+    [2000, 'A system alert interrupts…',                     function () { island.present('faceid'); }],
+    [3200, '…then hands the island back',                    function () { }],
+    [1800, 'Navigation takes over',                          function () { island.present('maps'); }],
+    [2000, 'Expanded: turn-by-turn detail',                  function () { island.expand(); }],
+    [2600, 'Back to idle',                                   function () { island.clear(); }],
+    [1200, 'Idle — just the camera',                         function () { }]
+  ];
+
+  var i = 0;
+  (function step() {
+    if (i >= TIMELINE.length) { i = 0; }          // loop forever for the recorder
+    var row = TIMELINE[i++];
+    say(row[1]);
+    row[2]();
+    setTimeout(step, row[0]);
+  })();
+
+  window.__stageReady = true;
+})();
+</script>
+</body>
+</html>

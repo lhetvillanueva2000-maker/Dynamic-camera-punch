@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Mirrors the web demo background token so the launch window and the page
+         agree; without that the app flashes white on cold start. -->
+    <color name="app_background">#FF08080A</color>
+    <color name="icon_background">#FF2B2748</color>
+</resources>

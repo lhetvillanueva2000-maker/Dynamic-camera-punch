@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Adaptive-icon foreground: the punch-hole pill above the "dcp" wordmark.
+
+  Coordinates are the same 1024-unit space as web/assets/logo.svg so the two
+  never drift. The <group> rescales the artwork's own bounding box (x 194‥830,
+  y 253‥930, centred on 512,591) into the 66dp adaptive-icon safe zone —
+  anything outside that can be cropped by the launcher's mask.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="1024"
+    android:viewportHeight="1024">
+
+    <group
+        android:pivotX="512" android:pivotY="591"
+        android:scaleX="0.953" android:scaleY="0.953"
+        android:translateY="-79">
+
+        <!-- Island cutout -->
+        <path
+            android:pathData="M384,253 H640 A92,92 0 0 1 640,437 H384 A92,92 0 0 1 384,253 Z"
+            android:fillColor="#FF08080F"
+            android:strokeColor="#FF9A72F4"
+            android:strokeWidth="15" />
+
+        <!-- Camera lens -->
+        <path android:pathData="M341,345 a59,59 0 1,0 118,0 a59,59 0 1,0 -118,0"
+              android:fillColor="#FF17171F" />
+        <path android:pathData="M355,345 a45,45 0 1,0 90,0 a45,45 0 1,0 -90,0"
+              android:fillColor="#FF14161F" />
+        <path android:pathData="M374,331 a12,10 0 1,0 24,0 a12,10 0 1,0 -24,0"
+              android:fillColor="#8CAAB6F2" />
+
+        <!-- Live-activity dot -->
+        <path android:pathData="M620,345 a24,24 0 1,0 48,0 a24,24 0 1,0 -48,0"
+              android:fillColor="#FFA259F5" />
+
+        <!-- d -->
+        <path android:pathData="M214,682 a78,78 0 1,0 156,0 a78,78 0 1,0 -156,0"
+              android:strokeColor="#FF6F7EF5" android:strokeWidth="40" />
+        <path android:pathData="M370,464 L370,690"
+              android:strokeColor="#FF6F7EF5" android:strokeWidth="40" />
+
+        <!-- c -->
+        <path android:pathData="M561.7,618.1 A78,78 0 1 0 561.7,745.9"
+              android:strokeColor="#FFFFFFFF" android:strokeWidth="40" />
+
+        <!-- p -->
+        <path android:pathData="M654,682 a78,78 0 1,0 156,0 a78,78 0 1,0 -156,0"
+              android:strokeColor="#FFC384F0" android:strokeWidth="40" />
+        <path android:pathData="M654,674 L654,930"
+              android:strokeColor="#FFC384F0" android:strokeWidth="40" />
+    </group>
+</vector>
