@@ -4,7 +4,7 @@
 
 # Dynamic Camera Punch
 
-### v2.1.0 — the theme
+### v2.2.0 — the theme
 
 **A Dynamic Island for your Android punch-hole — running over every app on the phone.**
 
@@ -62,33 +62,54 @@ no state change can slide the hole off the physical sensor.
 | **Swipe ← / →** | Swap the two concurrent activities |
 | **Swipe ↓ / ↑** | Expand / collapse |
 
-## The RAM dial
+## Memory
 
-Pull the tab on the **right edge** of the screen while the theme is running. It
-opens into a half-disc speedometer — graduated ticks, a labelled scale and a
-needle — and you drag along the arc to set the budget.
+**The app now stays out of your way instead of filling a quota.** Its real
+working set is about 30–45 MB and it stays there. Open the app to find the
+gauge — the dial used to be a pull tab welded to the right edge of your screen
+as a second permanent overlay, which nobody asked for and everybody had to look
+at. A control panel belongs in the app.
 
-The range is **762 MB minimum**, which is what the theme wants to run smoothly,
-up to **the device's RAM minus a 1.5 GB reserve for Android** that the dial can
-never eat into. On an 8 GB phone that is 762 MB – 6.5 GB. On a device too small
-to give up 762 MB after the reserve, the ceiling becomes the floor and the dial
-tells you the real number rather than pretending.
+Two mechanisms, and they work together:
 
-**Read this before you turn it up.** The island genuinely needs about 40 MB.
-Everything above that is held as *ballast* — real, resident memory allocated off-heap
-so the figure on the dial is a measurement rather than a decoration. That means:
+| | |
+|---|---|
+| **Manage memory automatically** (on by default) | The app watches its own footprint and releases what it can — cached avatars and artwork for anything not currently on the pill — and acts on every system memory warning, not just the critical one. |
+| **The ceiling** (the gauge) | A hard limit you set by dragging the needle. Crossing 80% of it triggers the same trim early. It is a limit, not a target: the app will not grow to fill it. |
 
-- Raising the budget **does not make the island faster.** Nothing here is starved.
-- A large resident footprint makes this process a *bigger* target for Android's
-  low-memory killer, not a smaller one, and it evicts other apps from RAM so they
-  cold-start instead of resuming.
-- If the system hits critical memory pressure the ballast is **dropped
-  immediately** and re-armed a minute later. Holding memory hostage while the
-  phone thrashes would be indefensible.
+The range runs from **762 MB** up to **the RAM Android reports for your device,
+minus 1.5 GB reserved for the system**. Note that Android reports rather less
+than the number on the box — a "4 GB" phone typically reports about 3.5 GB, so
+its ceiling tops out near 2.0 GB. A device too small to give up 762 MB after the
+reserve gets its real ceiling reported instead of a nominal minimum it would be
+killed for honouring.
 
-The dial shows the budget and the *measured* footprint side by side, from the same
-source `adb shell dumpsys meminfo` reads, so you can always see what is really
-happening. If you want the island and nothing else, set it to the minimum.
+The gauge draws the ceiling and the *measured* footprint on the same scale, read
+from the same source `adb shell dumpsys meminfo` uses, so the two can always be
+compared. On a healthy install the needle sits far above a very short green band.
+
+> **What changed, and why the old design was wrong.** Until v2.2.0 the dial set a
+> *target*, and the app allocated an off-heap "ballast" — hundreds of megabytes of
+> real, resident, deliberately wasted memory — so the number on the dial would be a
+> measurement rather than a decoration. It was honest about being waste and it was
+> still waste. On a low-end phone it is indefensible: it makes this process the
+> fattest thing on the device and the first one the low-memory killer reaches for,
+> and it evicts your actual apps so they cold-start instead of resuming. The
+> ballast is gone. Nothing replaced it.
+
+## Keeping the island on screen
+
+By default, **with nothing to show there is no overlay at all**. The island
+collapses back into your camera hole on the same curve it grew out of, and then
+the window is removed — not left resting on top of your launcher.
+
+If you would rather it stayed, the app has a **Keep the island on screen** switch.
+On, it sits as a circle around your camera whatever is happening. Off is the
+default and the behaviour most people want.
+
+"App is running" notices are never shown. Every foreground service posts one —
+file sync, a VPN, a launcher, this app's own overlay — and none of them is an
+event worth announcing on your camera cutout.
 
 ## The live demonstration
 
@@ -104,7 +125,7 @@ system instead of leaving a fattened heap inside the process that hosts the over
 ## Install
 
 ```bash
-adb install -r dist/dcp-v2.1.0-release.apk
+adb install -r dist/dcp-v2.2.0-release.apk
 ```
 
 Every launchable file names its own version, so there is never any doubt about
@@ -112,9 +133,9 @@ which build is in front of you:
 
 | File | What it is | Size |
 |---|---|---|
-| `dcp-v2.1.0-release.apk` | The theme. **Install this.** | 126,384 bytes |
-| `dcp-v2.1.0-debug.apk` | Same app built unoptimised, signed with the Android debug key and installed as `com.dcp.punch.debug` under the name **DCP (debug)**. Only useful if you are attaching a debugger; it sits alongside the release build rather than replacing it. | 167,110 bytes |
-| `web/dynamic-camera-punch-v2.1.0.html` | The demonstration, openable in any browser. | — |
+| `dcp-v2.2.0-release.apk` | The theme. **Install this.** | 128,112 bytes |
+| `dcp-v2.2.0-debug.apk` | Same app built unoptimised, signed with the Android debug key and installed as `com.dcp.punch.debug` under the name **DCP (debug)**. Only useful if you are attaching a debugger; it sits alongside the release build rather than replacing it. | 170,166 bytes |
+| `web/dynamic-camera-punch-v2.2.0.html` | The demonstration, openable in any browser. | — |
 
 ### Check the download before you install it
 
@@ -124,15 +145,15 @@ corrupt. The size column above is the quickest tell — a few KB means you got a
 web page. To be certain:
 
 ```
-sha256  release  5ec0559efa4e3c21edcb49e91050092f392cc149eed9276e90ae7fabdd8d6c55
-sha256  debug    84dfc30e51a50fcbef65203a5ddb6b6998a394951785e39948b0732c693b88a5
+sha256  release  92c606128b236abf9b0bdd78ceaf8b8bb266df6a04822d4ef7bcc43915f0bb2a
+sha256  debug    eb02b1867a9c7ec31df961440a74d35c78ceed8487359fc377ea6f22129cb08c
 ```
 
 Both are signed with APK Signature Scheme v2 and verify with `apksigner verify`
 across the whole supported range, API 24 to 34.
 
 The version also appears in the app's own header, and in Android's app info as
-version 2.1.0 (code 4). See [CHANGELOG.md](CHANGELOG.md) for what changed.
+version 2.2.0 (code 5). See [CHANGELOG.md](CHANGELOG.md) for what changed.
 
 Then open the app and work down the setup list:
 
@@ -144,7 +165,7 @@ Then open the app and work down the setup list:
 3. **Show notifications** — Android requires an ongoing notification for a service
    that runs indefinitely. That notice is also how you turn the theme off.
 
-Minimum Android 7.0 (API 24). ~126 KB. No network access.
+Minimum Android 7.0 (API 24). ~128 KB on disk, ~30–45 MB resident. No network access.
 
 ## Permissions, and why each one is there
 
@@ -181,12 +202,12 @@ android/app/src/main/java/com/dcp/punch/
   overlay/
     IslandService.java        foreground service, owns the two overlay windows
     IslandView.java           the island, drawn on Canvas
-    SidePanelView.java        right-edge tab and the semicircular RAM dial
   mem/
-    MemoryBudget.java         the ballast, the reserve, the live measurement
+    MemoryBudget.java         the ceiling, the reserve, the trimmer, the measurement
     Prefs.java                persisted settings
   ui/
     MainActivity.java         control panel
+    MemoryGaugeView.java      the speedometer, in the app rather than on the edge
     DemoActivity.java         the WebView sandbox, in its own process
 
 web/                          the demonstration — also opens in any browser

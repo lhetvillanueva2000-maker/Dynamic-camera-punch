@@ -77,6 +77,12 @@ public class DcpNotificationListener extends NotificationListenerService {
         // Never react to our own ongoing service notification.
         if (getPackageName().equals(sbn.getPackageName())) return;
 
+        // "App is running" notices. Every foreground service posts one — file
+        // sync, a VPN, a launcher, our own overlay — and none of them is an event
+        // anybody wants their camera cutout to announce. This is what used to put
+        // "Dynamic Camera Punch" on the island and leave it there.
+        if ((n.flags & Notification.FLAG_FOREGROUND_SERVICE) != 0) return;
+
         // Group summaries duplicate their children; media notifications are
         // already covered, and far better, by MediaMonitor.
         if ((n.flags & Notification.FLAG_GROUP_SUMMARY) != 0) return;

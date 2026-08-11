@@ -1,5 +1,62 @@
 # Changelog
 
+## v2.2.0 — efficient, and out of the way
+
+Everything here came from running v2.1.0 on a real phone — a 3.5 GB device,
+which is exactly the case the app should be good at and was not.
+
+**The ballast is gone, and with it the whole idea that the dial sets a target.**
+The gauge measured 568 MB in use against a 1.6 GB "budget" on a 3.5 GB phone.
+That was working as designed, and the design was wrong: the app was allocating
+real, resident, deliberately wasted memory so the number on the dial would be a
+measurement rather than a decoration. It was honest about being waste and it was
+still waste — it made this process the fattest thing on the device, the first one
+the low-memory killer reaches for, and it evicted the user's actual apps.
+
+The dial is now a **ceiling**, which is what everyone assumed it always was. The
+app allocates nothing to reach it and sits at its genuine working set of about
+30–45 MB. Two mechanisms run together: automatic management (on by default)
+watches the footprint, releases cached artwork for anything not on the pill, and
+acts on *every* system memory warning rather than only the critical one; and the
+manual ceiling, which triggers the same trim at 80% and is a limit rather than an
+operating point.
+
+**No overlay when there is nothing to show.** The island collapses back into the
+camera hole on the same curve it grew out of, and then the window is removed
+entirely rather than left resting on top of the launcher. A new **Keep the island
+on screen** switch in the app restores the old behaviour for anyone who wants it;
+it is off by default. Toggling it applies immediately to a running theme.
+
+**"App is running" notices are filtered out.** Any notification carrying
+`FLAG_FOREGROUND_SERVICE` is ignored — file sync, a VPN, a launcher, and this
+app's own ongoing notice, which is what used to put "Dynamic Camera Punch" on the
+island and leave it there.
+
+**The memory dial moved into the app.** It was a pull tab welded to the right
+edge of the screen as a second permanent overlay window. Nobody asked for a
+handle on the side of their display. It is now a speedometer on the control
+panel, drawing the ceiling and the measured footprint on the same scale so the
+two can be compared, and the second overlay window is gone — there is exactly one
+now, and only while it has something to say.
+
+**The demo's phones are phones again.** Every responsive rule shrank the frame's
+width without its height, so "Both" produced a narrow, tall device whose home
+screen clipped its own fourth column of icons and half the dock. The frame now
+keeps its 390×820 design size at every viewport and is scaled as a unit, verified
+across six widths from 1400 px down to 360 px: constant aspect ratio, nothing
+clipped, no horizontal page scroll.
+
+Also fixed: a `Trimmable` registered with the process-wide memory guard and never
+unregistered, which leaked the service and its view across a theme restart; and
+the gauge's touch mapping, whose dead-zone split sat 50° off the bisector so a
+touch below and to the left of the hub snapped to maximum instead of minimum.
+
+Verified: 23 browser assertions, now scale-relative rather than pixel-absolute;
+gauge angle round-trip exact across all 220° with the dead zone splitting at 90°;
+both APKs signature-verified across API 24–34; Android Lint zero errors; exactly
+one `addView` call in the overlay service. Still not launched on a device here —
+this environment has no KVM.
+
 ## v2.1.0 — it says what the message says
 
 **Messages now show the message.** The pill used to read a chat notification's

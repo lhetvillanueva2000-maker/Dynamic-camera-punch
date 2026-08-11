@@ -289,6 +289,50 @@ public class IslandView extends View {
         });
     }
 
+    /** Snap to the idle cutout with no animation, ready to be shown. */
+    public void resetToIdle() {
+        if (morph != null) morph.cancel();
+        shown = null;
+        contentAlpha = 1f;
+        computeTarget();
+        curW = tgtW; curH = tgtH; curR = tgtR;
+        requestLayout();
+        invalidate();
+    }
+
+    /**
+     * Play the closing move, then hand back.
+     *
+     * Same shape as the demo: the content fades, the island shrinks back into
+     * the camera hole on the morph curve, and only once it is a circle again
+     * does the whole thing fade out. Collapsing and vanishing at the same time
+     * reads as a glitch; collapsing *then* vanishing reads as the island going
+     * back into the hardware.
+     */
+    public void playClose(Runnable onDone) {
+        if (morph != null) morph.cancel();
+
+        animate(contentAlpha, 0f, 120, a -> { contentAlpha = a; invalidate(); }, () -> {
+            shown = null;
+            startMorph();
+            // Let the shrink land before the fade begins, or the two read as one
+            // muddy dissolve instead of a collapse.
+            postDelayed(() -> animate(1f, 0f, 150,
+                    a -> setAlpha(a),
+                    onDone), (long) (MORPH_MS * 0.62f));
+        });
+    }
+
+    /** Release anything rebuildable. Registered with MemoryBudget. */
+    public void trim(boolean hard) {
+        lens.setShader(null);            // regenerated on the next draw
+        if (hard) {
+            setLayerType(LAYER_TYPE_NONE, null);
+            setLayerType(LAYER_TYPE_HARDWARE, null);
+        }
+        invalidate();
+    }
+
     private void startMorph() {
         computeTarget();
         if (morph != null) morph.cancel();

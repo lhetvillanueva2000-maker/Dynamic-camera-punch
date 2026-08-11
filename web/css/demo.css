@@ -93,8 +93,9 @@
   gap: clamp(20px, 4vw, 46px);
 }
 
-/* Both-variant view: shrink the frames so the pair still fits a laptop. */
-.screens.is-both { --phone-w: 340px; --phone-h: 716px; }
+/* Both-variant view: the pair simply wraps. The frames are never squeezed —
+   see --phone-scale below, and .phone__stage in phone.css. */
+.screens.is-both { --phone-scale: .87; }
 
 /* ── Control panel ──────────────────────────────────────────────────── */
 .panel {
@@ -231,15 +232,27 @@
 }
 
 @media (max-width: 720px) {
-  :root { --phone-w: min(340px, calc(100vw - 34px)); --phone-h: 700px; }
-  .screens.is-both { --phone-w: min(300px, calc(50vw - 26px)); --phone-h: 620px; }
+  /* Scale, never squeeze. Discrete steps because CSS calc cannot divide a
+     viewport unit by a pixel length to produce the unitless ratio scale()
+     needs, and a phone that is 60% as wide but 90% as tall is not a phone. */
+  :root,
+  .screens.is-both { --phone-scale: .84; }
   .panel { position: static; }
   .topbar p { display: none; }
   .btn-grid { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); }
 }
 
-@media (max-width: 420px) {
-  .screens.is-both { --phone-w: calc(100vw - 34px); --phone-h: 700px; }
-  .phone__frame { padding: 9px; border-radius: 48px; }
-  .phone__screen { border-radius: 40px; }
+@media (max-width: 480px) {
+  :root,
+  .screens.is-both { --phone-scale: .74; }
+}
+
+@media (max-width: 400px) {
+  :root,
+  .screens.is-both { --phone-scale: .62; }
+}
+
+@media (max-width: 340px) {
+  :root,
+  .screens.is-both { --phone-scale: .52; }
 }

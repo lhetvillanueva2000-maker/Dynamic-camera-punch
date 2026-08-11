@@ -13,9 +13,8 @@ import com.dcp.punch.mem.MemoryBudget;
 /**
  * Process-wide singletons.
  *
- * The store and the memory budget outlive the service window, so that toggling
- * the theme off and on does not lose what is currently playing, and so the
- * ballast survives a service restart.
+ * The store and the memory guard outlive the service window, so that toggling
+ * the theme off and on does not lose what is currently playing.
  */
 public class DcpApp extends Application {
 
@@ -38,15 +37,18 @@ public class DcpApp extends Application {
     public MemoryBudget memory() { return memory; }
 
     /**
-     * The system is running out. The ballast is discretionary; the phone's
-     * responsiveness is not, so hand it all back immediately.
+     * The system wants memory back.
+     *
+     * Acted on at every level, not only the critical one. A theme that sits on
+     * top of every app has no business waiting until the phone is already
+     * thrashing before it gives up a cached avatar — and on a low-end device the
+     * moderate warnings are the ones that arrive.
      */
     @Override
     public void onTrimMemory(int level) {
         super.onTrimMemory(level);
-        if (level >= TRIM_MEMORY_RUNNING_CRITICAL) {
-            memory.shedForPressure();
-        }
+        if (level >= TRIM_MEMORY_RUNNING_CRITICAL) memory.shedForPressure();
+        else if (level >= TRIM_MEMORY_RUNNING_LOW) memory.trim(false);
     }
 
     @Override

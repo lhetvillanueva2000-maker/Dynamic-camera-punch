@@ -31,17 +31,20 @@ import com.dcp.punch.ui.MainActivity;
 /**
  * Owns the overlay for as long as the theme is enabled.
  *
- * Two windows, each sized exactly to its own content:
+ * Exactly one window, and only while it has something to say. It is
+ * TOP|CENTER_HORIZONTAL and re-measured on every animation frame: being exactly
+ * island-sized is what lets every other pixel of the screen keep receiving
+ * touches, since an overlay that covered the display would break every app
+ * underneath it.
  *
- *   island  TOP|CENTER_HORIZONTAL, re-measured every animation frame. Being
- *           exactly island-sized is what lets every other pixel of the screen
- *           keep receiving touches — an overlay that covered the whole display
- *           would break every app underneath it.
- *   panel   RIGHT|CENTER_VERTICAL, the pull tab and RAM dial.
+ * The window is added when content arrives and taken down again once the island
+ * has collapsed back into the cutout — unless "keep on screen" is switched on in
+ * the app. There used to be a second overlay as well, a pull tab down the right
+ * edge holding the memory dial. Nobody asked for a permanent handle on the side
+ * of their screen; the dial now lives in the app, where a control panel belongs.
  *
- * Both use TYPE_APPLICATION_OVERLAY, which is the only window type a normal app
- * may use over other apps, and only after the user grants "Display over other
- * apps" in Settings.
+ * TYPE_APPLICATION_OVERLAY is the only window type a normal app may use over
+ * other apps, and only after the user grants "Display over other apps".
  */
 public class IslandService extends Service implements IslandStore.Listener {
 
@@ -63,27 +66,29 @@ public class IslandService extends Service implements IslandStore.Listener {
 
     public static final String ACTION_STOP = BuildConfig.APPLICATION_ID + ".STOP_THEME";
 
+    /** Re-read the settings that change the overlay's shape or presence. */
+    public static final String ACTION_REFRESH = BuildConfig.APPLICATION_ID + ".REFRESH";
+
     private static volatile boolean running;
 
     private WindowManager wm;
     private IslandView island;
-    private SidePanelView panel;
-    private WindowManager.LayoutParams islandLp, panelLp;
+    private WindowManager.LayoutParams islandLp;
+
+    /** Whether the overlay window is currently attached. */
+    private boolean islandAttached;
+
+    /** Bumped whenever a close is superseded, so its callback can bow out. */
+    private int closeToken;
+
+    /** Held so it can be unregistered — MemoryBudget outlives this service. */
+    private MemoryBudget.Trimmable trimmable;
 
     private IslandStore store;
     private SystemMonitor system;
     private MemoryBudget memory;
 
     private final Handler main = new Handler(Looper.getMainLooper());
-
-    /** Re-tops the ballast periodically: the app's own usage drifts. */
-    private final Runnable ballastTick = new Runnable() {
-        @Override public void run() {
-            if (!running) return;
-            memory.applyBallast();
-            main.postDelayed(this, 30_000L);
-        }
-    };
 
     public static boolean isRunning() { return running; }
 
@@ -115,6 +120,14 @@ public class IslandService extends Service implements IslandStore.Listener {
         c.stopService(new Intent(c, IslandService.class));
     }
 
+    /** Nudge a running service to re-read its display settings. */
+    public static void refresh(Context c) {
+        if (!isRunning()) return;
+        try {
+            c.startService(new Intent(c, IslandService.class).setAction(ACTION_REFRESH));
+        } catch (Exception ignored) { }
+    }
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -129,6 +142,13 @@ public class IslandService extends Service implements IslandStore.Listener {
             Prefs.get(this).setThemeEnabled(false);
             stopSelf();
             return START_NOT_STICKY;
+        }
+
+        if (intent != null && ACTION_REFRESH.equals(intent.getAction())) {
+            // "Keep on screen" was toggled while we were already running. There
+            // is no store change to ride on, so the setting is applied here.
+            if (running) main.post(() -> syncIslandWindow(true));
+            return START_STICKY;
         }
 
         // The permission can be revoked while we are running; never assume.
@@ -154,8 +174,7 @@ public class IslandService extends Service implements IslandStore.Listener {
         sendBroadcast(new Intent(ACTION_CLOSE_DEMO).setPackage(getPackageName()),
                 PERMISSION_INTERNAL);
 
-        memory.applyBallast();
-        main.postDelayed(ballastTick, 30_000L);
+        memory.startWatch();
 
         Prefs.get(this).setThemeEnabled(true);
         return START_STICKY;
@@ -186,6 +205,11 @@ public class IslandService extends Service implements IslandStore.Listener {
             @Override public void onExpandedChanged(boolean expanded) { refreshIslandWindow(); }
             @Override public void onOpenContent(Presentation p) { openContent(p); }
         });
+        trimmable = hard -> {
+            store.trim(hard);
+            if (island != null) island.trim(hard);
+        };
+        memory.register(trimmable);
 
         islandLp = new WindowManager.LayoutParams(
                 WindowManager.LayoutParams.WRAP_CONTENT,
@@ -205,26 +229,68 @@ public class IslandService extends Service implements IslandStore.Listener {
             islandLp.layoutInDisplayCutoutMode = WindowManager.LayoutParams
                     .LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
         }
-        wm.addView(island, islandLp);
+        // The window is not added here. It goes up when there is something to
+        // show and comes down again afterwards — see syncIslandWindow().
+        island.resetToIdle();
+        syncIslandWindow(false);
+    }
 
-        panel = new SidePanelView(this, memory, new SidePanelView.Callbacks() {
-            @Override public void onPanelOpenChanged(boolean open) { refreshPanelWindow(open); }
-            @Override public void onGeometryChanged() { }
+    /* ── The island window comes and goes ────────────────────────────── */
+
+    /**
+     * Add or remove the overlay so that it exists only when it has a reason to.
+     *
+     * An overlay window is not free even when it is drawing a small black
+     * circle: it is a surface the compositor blends on every frame, and it sits
+     * on top of the launcher whether or not anything is happening. With nothing
+     * to show and "keep on screen" switched off, the right number of overlay
+     * windows is zero.
+     */
+    private void syncIslandWindow(boolean animate) {
+        if (island == null) return;
+        boolean want = !store.isEmpty() || Prefs.get(this).isAlwaysVisible();
+        if (want) attachIsland(animate);
+        else detachIsland();
+    }
+
+    private void attachIsland(boolean animate) {
+        // Cancels any close still in flight — a notification that lands mid-exit
+        // must not be followed by the window being torn down behind it.
+        closeToken++;
+        if (!islandAttached) {
+            island.setAlpha(0f);
+            island.resetToIdle();
+            try {
+                wm.addView(island, islandLp);
+                islandAttached = true;
+            } catch (Exception e) {
+                Log.w(TAG, "could not add the island window: " + e);
+                return;
+            }
+            island.animate().alpha(1f).setDuration(140).start();
+            island.applyState(true);      // grow out of the cutout
+            return;
+        }
+        island.setAlpha(1f);
+        island.applyState(animate);
+        refreshIslandWindow();
+    }
+
+    private void detachIsland() {
+        if (!islandAttached) return;
+        final int token = ++closeToken;
+        island.playClose(() -> {
+            if (token != closeToken || !islandAttached) return;   // superseded
+            removeView(island);
+            islandAttached = false;
+            island.setAlpha(1f);
+            island.resetToIdle();
         });
-        panelLp = new WindowManager.LayoutParams(
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                WindowManager.LayoutParams.WRAP_CONTENT,
-                overlayType(), baseFlags(), PixelFormat.TRANSLUCENT);
-        panelLp.gravity = Gravity.END | Gravity.CENTER_VERTICAL;
-        panelLp.y = 0;
-        wm.addView(panel, panelLp);
-
-        island.applyState(false);
     }
 
     /** Keep the window's flags and offset in step with the island's state. */
     private void refreshIslandWindow() {
-        if (island == null || islandLp == null) return;
+        if (island == null || islandLp == null || !islandAttached) return;
         int flags = baseFlags();
         if (store.isExpanded()) {
             // Dim everything behind the expanded view, the way iOS does.
@@ -236,19 +302,6 @@ public class IslandService extends Service implements IslandStore.Listener {
         islandLp.flags = flags;
         islandLp.y = Math.round(island.islandTopPx());
         try { wm.updateViewLayout(island, islandLp); } catch (Exception ignored) { }
-    }
-
-    private void refreshPanelWindow(boolean open) {
-        if (panel == null || panelLp == null) return;
-        int flags = baseFlags();
-        if (open) {
-            flags |= WindowManager.LayoutParams.FLAG_DIM_BEHIND;
-            panelLp.dimAmount = 0.35f;
-        } else {
-            panelLp.dimAmount = 0f;
-        }
-        panelLp.flags = flags;
-        try { wm.updateViewLayout(panel, panelLp); } catch (Exception ignored) { }
     }
 
     /** Tapping the island opens whatever posted it. */
@@ -266,8 +319,8 @@ public class IslandService extends Service implements IslandStore.Listener {
     public void onIslandChanged(boolean animate) {
         if (island == null) return;
         main.post(() -> {
-            island.applyState(animate);
-            refreshIslandWindow();
+            syncIslandWindow(animate);
+            if (islandAttached) refreshIslandWindow();
         });
     }
 
@@ -298,7 +351,7 @@ public class IslandService extends Service implements IslandStore.Listener {
                 .setSmallIcon(R.drawable.ic_island)
                 .setContentTitle(getString(R.string.notif_title))
                 .setContentText(getString(R.string.notif_text,
-                        MemoryBudget.mb(memory.getBudgetBytes())))
+                        MemoryBudget.mb(memory.sample())))
                 .setContentIntent(open)
                 .addAction(new Notification.Action.Builder(
                         android.graphics.drawable.Icon.createWithResource(this, R.drawable.ic_island),
@@ -319,13 +372,12 @@ public class IslandService extends Service implements IslandStore.Listener {
     @Override
     public void onDestroy() {
         running = false;
-        main.removeCallbacks(ballastTick);
+        if (trimmable != null) { memory.unregister(trimmable); trimmable = null; }
         store.setListener(null);
         if (system != null) system.stop();
-        removeView(island);
-        removeView(panel);
+        if (islandAttached) removeView(island);
+        islandAttached = false;
         island = null;
-        panel = null;
         // Give every byte back the moment the theme is switched off.
         memory.release();
         super.onDestroy();

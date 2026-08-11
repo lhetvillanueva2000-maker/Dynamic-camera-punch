@@ -35,8 +35,9 @@ public class MainActivity extends Activity {
 
     private static final int REQ_POST_NOTIFS = 10;
 
-    private Switch themeSwitch, bootSwitch;
-    private TextView themeStatus, variantA, variantB, variantDesc, ramValue, ramDetail, demoDesc;
+    private Switch themeSwitch, bootSwitch, alwaysSwitch, autoSwitch;
+    private TextView themeStatus, variantA, variantB, variantDesc, ramDetail, demoDesc, alwaysDesc;
+    private MemoryGaugeView ramGauge;
     private Button demoButton;
     private View rowOverlay, rowListener, rowPost;
 
@@ -60,8 +61,11 @@ public class MainActivity extends Activity {
         variantA = findViewById(R.id.variant_a);
         variantB = findViewById(R.id.variant_b);
         variantDesc = findViewById(R.id.variant_desc);
-        ramValue = findViewById(R.id.ram_value);
+        ramGauge = findViewById(R.id.ram_gauge);
         ramDetail = findViewById(R.id.ram_detail);
+        alwaysSwitch = findViewById(R.id.always_switch);
+        alwaysDesc = findViewById(R.id.always_desc);
+        autoSwitch = findViewById(R.id.auto_switch);
         demoDesc = findViewById(R.id.demo_desc);
         demoButton = findViewById(R.id.demo_button);
         // Show the version on screen as well as in Settings, so "which build am
@@ -80,6 +84,28 @@ public class MainActivity extends Activity {
 
         bootSwitch.setOnCheckedChangeListener((b, checked) -> {
             if (!binding) prefs.setStartOnBoot(checked);
+        });
+
+        alwaysSwitch.setOnCheckedChangeListener((b, checked) -> {
+            if (binding) return;
+            prefs.setAlwaysVisible(checked);
+            // Applies immediately: with the theme running and nothing to show,
+            // this is the difference between an overlay window and none.
+            IslandService.refresh(this);
+            bind();
+        });
+
+        autoSwitch.setOnCheckedChangeListener((b, checked) -> {
+            if (binding) return;
+            memory.setAutoManage(checked);
+            bind();
+        });
+
+        // Dragging the needle only commits on release, so the ceiling is not
+        // rewritten to preferences once per touch event.
+        ramGauge.bind(memory, bytes -> {
+            memory.setBudgetBytes(bytes);
+            bind();
         });
 
         variantA.setOnClickListener(v -> setVariant("a"));
@@ -134,13 +160,17 @@ public class MainActivity extends Activity {
                 ? R.drawable.bg_pill_active : R.drawable.bg_pill);
         variantDesc.setText("a".equals(variant) ? R.string.variant_a_desc : R.string.variant_b_desc);
 
-        long budget = memory.getBudgetBytes();
-        ramValue.setText(MemoryBudget.mb(budget));
+        alwaysSwitch.setChecked(prefs.isAlwaysVisible());
+        alwaysDesc.setText(prefs.isAlwaysVisible() ? R.string.always_on : R.string.always_off);
+        autoSwitch.setChecked(memory.isAutoManage());
+
+        memory.sample();
+        ramGauge.refresh();
         ramDetail.setText(getString(
                 R.string.ram_detail_fmt,
                 MemoryBudget.gb(memory.totalDeviceBytes()),
                 MemoryBudget.gb(MemoryBudget.OS_RESERVE_BYTES),
-                MemoryBudget.mb(memory.maxBudgetBytes()),
+                MemoryBudget.readable(memory.maxBudgetBytes()),
                 MemoryBudget.mb(memory.actualUsageBytes())));
 
         // The demonstration and the theme are mutually exclusive by design.

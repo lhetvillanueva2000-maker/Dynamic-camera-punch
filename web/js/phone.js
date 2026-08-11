@@ -97,6 +97,11 @@ DI.Phone = (function () {
     '<figure class="phone" data-variant="' + variant + '">' +
       (opts.label === false ? '' :
         '<figcaption class="phone__label">' + (VARIANT_COPY[variant] || '') + '</figcaption>') +
+      /* The stage owns the layout box; the frame inside it keeps its full
+         390×820 design size at every screen width and is scaled as a unit. A
+         phone that is narrowed without being shortened stops being a phone —
+         its home screen clips and its dock loses icons. */
+      '<div class="phone__stage">' +
       '<div class="phone__frame">' +
         '<div class="phone__buttons" aria-hidden="true">' +
           '<i class="phone__btn phone__btn--silent"></i>' +
@@ -137,6 +142,7 @@ DI.Phone = (function () {
           ISLAND_HTML +
           '<div class="homebar" data-homebar></div>' +
         '</div>' +
+      '</div>' +
       '</div>' +
     '</figure>';
   }

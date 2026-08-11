@@ -7,40 +7,37 @@ import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The thing the right-edge dial actually controls.
+ * The memory guard: a ceiling the app stays under, and the machinery that keeps
+ * it there.
  *
- * HONESTY NOTE, because this is easy to fake and worth being straight about:
- * an app cannot simply "decide" to use a given amount of RAM through ordinary
- * caching. The island's genuine working set is roughly 25-45 MB. To make the
- * number on the dial a real measurement rather than decoration, the budget is
- * met by allocating a **ballast** — real memory, really resident — on top of
- * whatever the app is actually using.
+ * WHAT CHANGED IN v2.2.0, AND WHY IT WAS WRONG BEFORE
+ * Until now the dial set a *target* and the app allocated an off-heap "ballast"
+ * to meet it — 500-odd MB of real, resident, deliberately wasted memory, so that
+ * the number on the dial would be a measurement rather than a decoration. It was
+ * honest about being waste, and it was still waste. On a low-end phone it is
+ * indefensible: it makes this process the fattest thing on the device and the
+ * first one the low-memory killer reaches for, and it evicts the user's actual
+ * apps so they cold-start instead of resuming.
  *
- * Two consequences the UI states plainly:
- *   • Raising the budget does not make the island faster. Nothing here is
- *     starved for memory.
- *   • A large resident footprint makes the process a *bigger* target for the
- *     low-memory killer, not a smaller one, and evicts other apps from RAM.
+ * The dial now sets a **ceiling**, which is what everyone assumed it did. The
+ * app allocates nothing to reach it and simply stays far below it — the island's
+ * genuine working set is around 30-45 MB. Two mechanisms, and they run together:
  *
- * Implementation choices that matter:
+ *   Automatic (on by default). A watchdog samples PSS and, as usage climbs
+ *   toward the ceiling, sheds what can be shed: cached artwork on presentations
+ *   that are not on screen, then a GC. It also trims on every system memory
+ *   warning rather than waiting for its own timer.
  *
- *   Direct buffers, not byte[]. The Dalvik heap is capped per-process
- *   (getLargeMemoryClass() is commonly 256-512 MB), so a 728 MB Java array
- *   would OOM long before it got there. ByteBuffer.allocateDirect is off-heap
- *   and bounded only by the device.
+ *   Manual. The dial's ceiling. Reaching 80% of it triggers the same trim early;
+ *   the ceiling is the backstop, not the operating point.
  *
- *   Pages are touched. Allocating address space does not make it resident;
- *   the kernel only backs a page once written. Writing one byte per 4 KiB page
- *   is what turns the allocation into real RSS that shows up in `dumpsys`.
- *
- *   There is a safety valve. onTrimMemory at COMPLETE/CRITICAL sheds the whole
- *   ballast immediately. Holding memory hostage while the system thrashes would
- *   be indefensible, so the budget yields and re-arms once pressure clears.
+ * The gauge shows the ceiling and the *measured* footprint side by side, read
+ * from the same source `adb shell dumpsys meminfo` uses, so the two can always
+ * be compared and the app cannot quietly lie about what it costs.
  */
 public final class MemoryBudget {
 
@@ -48,63 +45,86 @@ public final class MemoryBudget {
 
     /**
      * Headroom left for Android and every other app, carved off the top before
-     * the dial sees a single byte. On an 8 GB phone the dial's ceiling is 6.5 GB.
+     * the dial sees a single byte. On an 8 GB phone the ceiling tops out at
+     * 6.5 GB.
      */
     public static final long OS_RESERVE_BYTES = 1_536L * 1024 * 1024;   // 1.5 GiB
 
-    /** The specified minimum for the theme to run smoothly, and the default. */
+    /** The specified minimum ceiling, and the default. */
     public static final long MIN_BUDGET_BYTES = 762L * 1024 * 1024;
 
     public static final long DEFAULT_BUDGET_BYTES = MIN_BUDGET_BYTES;
 
     /**
-     * Absolute floor, used only where the device cannot afford the 762 MB
-     * minimum once the OS reserve is taken out — a 2 GB phone has 500 MB left,
-     * and honouring the nominal minimum there would mean allocating a third of
-     * the machine and getting killed for it. The dial reports the real ceiling
-     * instead of pretending.
+     * Absolute floor, for a device that cannot spare the 762 MB minimum once the
+     * OS reserve is taken out. A 2 GB phone has 500 MB left; the gauge reports
+     * that real number rather than a nominal minimum.
      */
     public static final long FLOOR_BYTES = 64L * 1024 * 1024;
 
-    private static final int CHUNK_BYTES = 16 * 1024 * 1024;   // 16 MiB per buffer
-    private static final int PAGE = 4096;
+    /** Trim once the footprint passes this share of the ceiling. */
+    private static final float TRIM_AT = 0.80f;
+
+    /** How often the watchdog samples, while the theme is running. */
+    private static final long WATCH_MS = 20_000L;
+
+    /** Anything a trim can release registers here. */
+    public interface Trimmable {
+        /**
+         * Release what is not needed right now.
+         *
+         * @param hard true when the system itself is short of memory, not merely
+         *             when this app is drifting up toward its own ceiling. A hard
+         *             trim should give up everything that can be rebuilt.
+         */
+        void onTrimMemory(boolean hard);
+    }
 
     private final Context app;
     private final ActivityManager am;
     private final Handler main = new Handler(Looper.getMainLooper());
-    private final List<ByteBuffer> ballast = new ArrayList<>();
+    private final List<Trimmable> trimmables = new ArrayList<>();
 
     private long budgetBytes;
-    private boolean shed;              // ballast dropped under system pressure
+    private boolean autoManage;
+    private boolean watching;
+
+    /** Last sampled PSS, so the gauge can redraw without re-reading it. */
+    private volatile long lastSample;
+    private long lastTrimAt;
+
+    private final Runnable watchdog = new Runnable() {
+        @Override public void run() {
+            if (!watching) return;
+            sample();
+            if (autoManage && shouldTrim()) trim(false);
+            main.postDelayed(this, WATCH_MS);
+        }
+    };
 
     public MemoryBudget(Context context) {
         this.app = context.getApplicationContext();
         this.am = (ActivityManager) app.getSystemService(Context.ACTIVITY_SERVICE);
-        this.budgetBytes = clamp(Prefs.get(app).getBudgetBytes());
+        Prefs p = Prefs.get(app);
+        this.budgetBytes = clamp(p.getBudgetBytes());
+        this.autoManage = p.isAutoMemory();
+        this.lastSample = readPss();
     }
 
     /* ── Device limits ───────────────────────────────────────────────── */
 
-    /** Physical RAM in the device. */
     public long totalDeviceBytes() {
         ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
         am.getMemoryInfo(mi);
         return mi.totalMem;
     }
 
-    /**
-     * The most the dial may ask for: the device, less the OS reserve. 8 GB gives
-     * 6.5 GB; 12 GB gives 10.5 GB. The reserve is taken off the top and the dial
-     * can never reach into it.
-     */
+    /** The device, less the OS reserve. 8 GB → 6.5 GB; 12 GB → 10.5 GB. */
     public long maxBudgetBytes() {
         return Math.max(FLOOR_BYTES, totalDeviceBytes() - OS_RESERVE_BYTES);
     }
 
-    /**
-     * The bottom of the dial's range: 762 MB, except on a device too small to
-     * give that up after the reserve, where the ceiling becomes the floor too.
-     */
+    /** 762 MB, unless the device is too small to give that up after the reserve. */
     public long minBudgetBytes() {
         return Math.min(MIN_BUDGET_BYTES, maxBudgetBytes());
     }
@@ -115,20 +135,42 @@ public final class MemoryBudget {
 
     public long getBudgetBytes() { return budgetBytes; }
 
-    /* ── Live measurement ────────────────────────────────────────────── */
+    public void setBudgetBytes(long bytes) {
+        budgetBytes = clamp(bytes);
+        Prefs.get(app).setBudgetBytes(budgetBytes);
+        if (shouldTrim()) trim(false);
+    }
+
+    public boolean isAutoManage() { return autoManage; }
+
+    public void setAutoManage(boolean on) {
+        autoManage = on;
+        Prefs.get(app).setAutoMemory(on);
+        if (on) trim(false);
+    }
+
+    /* ── Measurement ─────────────────────────────────────────────────── */
 
     /**
-     * Actual proportional set size for this process, straight from the same
-     * source `adb shell dumpsys meminfo` reads. This is what the gauge shows
-     * as "actual" — never an estimate, never the budget echoed back.
+     * Proportional set size for this process, from the same source
+     * `dumpsys meminfo` reads. Genuinely costs a few milliseconds, so callers
+     * that redraw get the cached figure and the watchdog refreshes it.
      */
-    public long actualUsageBytes() {
+    private long readPss() {
         Debug.MemoryInfo info = new Debug.MemoryInfo();
         Debug.getMemoryInfo(info);
         return info.getTotalPss() * 1024L;
     }
 
-    /** Free memory left to the system as a whole. */
+    /** Re-read the footprint now. */
+    public long sample() {
+        lastSample = readPss();
+        return lastSample;
+    }
+
+    /** The last measured footprint, without paying for a fresh read. */
+    public long actualUsageBytes() { return lastSample; }
+
     public long systemAvailableBytes() {
         ActivityManager.MemoryInfo mi = new ActivityManager.MemoryInfo();
         am.getMemoryInfo(mi);
@@ -141,85 +183,66 @@ public final class MemoryBudget {
         return mi.lowMemory;
     }
 
-    public long ballastBytes() {
-        synchronized (ballast) {
-            return (long) ballast.size() * CHUNK_BYTES;
+    /** How full the ceiling is, 0..1, for the gauge. */
+    public float loadFraction() {
+        long cap = Math.max(1, budgetBytes);
+        return Math.max(0f, Math.min(1f, lastSample / (float) cap));
+    }
+
+    private boolean shouldTrim() {
+        return lastSample > budgetBytes * TRIM_AT;
+    }
+
+    /* ── Trimming ────────────────────────────────────────────────────── */
+
+    public void register(Trimmable t) {
+        synchronized (trimmables) { if (!trimmables.contains(t)) trimmables.add(t); }
+    }
+
+    public void unregister(Trimmable t) {
+        synchronized (trimmables) { trimmables.remove(t); }
+    }
+
+    /**
+     * Give memory back. Rate-limited, because a trim that runs every frame is
+     * itself a performance problem — the caches it drops have to be rebuilt.
+     */
+    public void trim(boolean hard) {
+        long now = android.os.SystemClock.uptimeMillis();
+        if (!hard && now - lastTrimAt < 5_000L) return;
+        lastTrimAt = now;
+
+        List<Trimmable> copy;
+        synchronized (trimmables) { copy = new ArrayList<>(trimmables); }
+        for (Trimmable t : copy) {
+            try { t.onTrimMemory(hard); } catch (Exception e) { Log.w(TAG, "trim failed: " + e); }
         }
+        if (hard) System.gc();
+        sample();
     }
 
-    /* ── Applying the budget ─────────────────────────────────────────── */
-
-    /**
-     * Set the budget and reshape the ballast to match. Called from the dial as
-     * the finger moves, so it is cheap when the target has not changed by a
-     * whole chunk.
-     */
-    public void setBudgetBytes(long bytes) {
-        budgetBytes = clamp(bytes);
-        Prefs.get(app).setBudgetBytes(budgetBytes);
-        if (!shed) applyBallast();
+    /** Start the watchdog. Called when the overlay comes up. */
+    public void startWatch() {
+        if (watching) return;
+        watching = true;
+        main.postDelayed(watchdog, WATCH_MS);
     }
 
-    /**
-     * Grow or shrink the ballast so that (real usage + ballast) lands on the
-     * budget. Measured against live PSS rather than a running total, so the
-     * island's own churn is absorbed instead of stacked on top.
-     */
-    public synchronized void applyBallast() {
-        if (shed) return;
-
-        long realWithoutBallast = actualUsageBytes() - ballastBytes();
-        long wanted = budgetBytes - realWithoutBallast;
-        int wantChunks = (int) Math.max(0, wanted / CHUNK_BYTES);
-
-        synchronized (ballast) {
-            while (ballast.size() > wantChunks) {
-                ballast.remove(ballast.size() - 1);
-            }
-            while (ballast.size() < wantChunks) {
-                try {
-                    ByteBuffer b = ByteBuffer.allocateDirect(CHUNK_BYTES);
-                    // Touch one byte per page: allocation alone is only address
-                    // space, and the dial would report memory that isn't there.
-                    for (int off = 0; off < CHUNK_BYTES; off += PAGE) {
-                        b.put(off, (byte) 1);
-                    }
-                    ballast.add(b);
-                } catch (OutOfMemoryError | RuntimeException e) {
-                    // The device said no. Stop where we are and let the gauge
-                    // report the honest number rather than the requested one.
-                    Log.w(TAG, "ballast capped at " + ballast.size() + " chunks: " + e);
-                    break;
-                }
-            }
-        }
-        if (wantChunks > 0) System.gc();
+    public void stopWatch() {
+        watching = false;
+        main.removeCallbacks(watchdog);
     }
 
-    /**
-     * System is critically short. Drop everything immediately — the ballast is
-     * discretionary and the phone's responsiveness is not.
-     */
+    /** The system is short of memory. Everything that can go, goes. */
     public void shedForPressure() {
-        synchronized (ballast) {
-            if (ballast.isEmpty() && shed) return;
-            ballast.clear();
-        }
-        shed = true;
-        Log.i(TAG, "ballast shed under memory pressure");
-        // Re-arm later; if pressure persists the next attempt sheds again.
-        main.postDelayed(() -> {
-            shed = false;
-            if (!isUnderSystemPressure()) applyBallast();
-        }, 60_000L);
+        Log.i(TAG, "system memory pressure — hard trim");
+        trim(true);
     }
 
-    public boolean isShed() { return shed; }
-
-    /** Release everything, e.g. when the theme is switched off. */
+    /** Kept for the service teardown path. */
     public void release() {
-        synchronized (ballast) { ballast.clear(); }
-        System.gc();
+        stopWatch();
+        trim(true);
     }
 
     /* ── Formatting ──────────────────────────────────────────────────── */
@@ -231,5 +254,11 @@ public final class MemoryBudget {
     public static String gb(long bytes) {
         double g = bytes / (1024.0 * 1024 * 1024);
         return String.format(java.util.Locale.US, "%.1f GB", g);
+    }
+
+    /** MB while that still reads cleanly, GB once it does not. */
+    public static String readable(long bytes) {
+        long m = bytes / (1024 * 1024);
+        return m < 1024 ? m + " MB" : gb(bytes);
     }
 }

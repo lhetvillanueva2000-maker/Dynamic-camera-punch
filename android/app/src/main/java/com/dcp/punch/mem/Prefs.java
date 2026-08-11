@@ -12,6 +12,8 @@ public final class Prefs {
     private static final String K_BUDGET = "ram_budget_bytes";
     private static final String K_BOOT = "start_on_boot";
     private static final String K_HANDLE = "handle_y_fraction";
+    private static final String K_ALWAYS = "island_always_visible";
+    private static final String K_AUTO_MEM = "auto_memory";
 
     private static Prefs instance;
 
@@ -44,4 +46,18 @@ public final class Prefs {
     /** Vertical position of the pull handle, 0..1 down the screen. */
     public float getHandleY() { return sp.getFloat(K_HANDLE, 0.42f); }
     public void setHandleY(float v) { sp.edit().putFloat(K_HANDLE, v).apply(); }
+
+    /**
+     * Keep the island on screen when there is nothing to show.
+     *
+     * Off by default, which is the behaviour people expect: with no notification
+     * the overlay window is taken down entirely rather than resting as a shape
+     * on top of the launcher.
+     */
+    public boolean isAlwaysVisible() { return sp.getBoolean(K_ALWAYS, false); }
+    public void setAlwaysVisible(boolean v) { sp.edit().putBoolean(K_ALWAYS, v).apply(); }
+
+    /** Let the app manage its own footprint. On by default. */
+    public boolean isAutoMemory() { return sp.getBoolean(K_AUTO_MEM, true); }
+    public void setAutoMemory(boolean v) { sp.edit().putBoolean(K_AUTO_MEM, v).apply(); }
 }

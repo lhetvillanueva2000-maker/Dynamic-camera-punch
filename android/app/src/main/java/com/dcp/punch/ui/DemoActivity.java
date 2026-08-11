@@ -41,7 +41,7 @@ import com.dcp.punch.overlay.IslandService;
  */
 public class DemoActivity extends Activity {
 
-    private static final String START_URL = "file:///android_asset/web/dynamic-camera-punch-v2.1.0.html";
+    private static final String START_URL = "file:///android_asset/web/dynamic-camera-punch-v2.2.0.html";
     private static final String ASSET_PREFIX = "file:///android_asset/";
 
     private WebView web;

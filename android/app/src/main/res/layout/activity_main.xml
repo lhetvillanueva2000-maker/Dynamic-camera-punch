@@ -129,35 +129,74 @@
                 android:text="@string/variant_b_desc" />
         </LinearLayout>
 
-        <!-- ── Memory budget ──────────────────────────────────────── -->
+        <!-- ── Keep the island on screen ──────────────────────────── -->
+        <LinearLayout
+            style="@style/Card"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView style="@style/CardTitle" android:text="@string/always_title" />
+
+                <TextView
+                    android:id="@+id/always_desc"
+                    style="@style/CardBody"
+                    android:text="@string/always_off" />
+            </LinearLayout>
+
+            <Switch
+                android:id="@+id/always_switch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="0dp"
+                android:minHeight="0dp" />
+        </LinearLayout>
+
+        <!-- ── Memory ─────────────────────────────────────────────── -->
         <LinearLayout style="@style/Card" android:orientation="vertical">
+
+            <TextView style="@style/CardTitle" android:text="@string/ram_title" />
+
+            <com.dcp.punch.ui.MemoryGaugeView
+                android:id="@+id/ram_gauge"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp" />
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:gravity="bottom">
+                android:gravity="center_vertical"
+                android:layout_marginTop="10dp">
 
-                <TextView
-                    style="@style/CardTitle"
+                <LinearLayout
                     android:layout_width="0dp"
+                    android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="@string/ram_title" />
+                    android:orientation="vertical">
 
-                <TextView
-                    android:id="@+id/ram_value"
+                    <TextView style="@style/CardTitle" android:text="@string/auto_title" />
+                    <TextView style="@style/CardBody" android:text="@string/auto_desc" />
+                </LinearLayout>
+
+                <Switch
+                    android:id="@+id/auto_switch"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textColor="@color/green"
-                    android:textSize="19sp"
-                    android:textStyle="bold"
-                    android:text="@string/ram_placeholder" />
+                    android:minWidth="0dp"
+                    android:minHeight="0dp" />
             </LinearLayout>
 
             <TextView
                 android:id="@+id/ram_detail"
                 style="@style/CardBody"
-                android:layout_marginTop="6dp" />
+                android:layout_marginTop="12dp" />
 
             <TextView
                 style="@style/CardBody"

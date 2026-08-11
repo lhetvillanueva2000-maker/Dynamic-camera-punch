@@ -19,7 +19,7 @@ const fs = require('fs');
 const { chromium } = require('playwright');
 
 const ROOT = path.resolve(__dirname, '..');
-const PAGE = 'file://' + path.join(ROOT, 'web', 'dynamic-camera-punch-v2.1.0.html');
+const PAGE = 'file://' + path.join(ROOT, 'web', 'dynamic-camera-punch-v2.2.0.html');
 
 let fails = 0;
 const ok = (m) => console.log('  ✓ ' + m);
@@ -105,17 +105,26 @@ async function idleGeometry(page) {
       : bad(`variant ${v} idle is ${Math.round(b.width)}×${Math.round(b.height)}, not round`);
   }
 
+  // Measured against the idle size rather than a pixel count: the frame is
+  // scaled to fit the viewport, so absolute widths mean nothing here.
   const isl = page.locator('.phone[data-variant="a"] [data-island]').first();
+  const idle = await isl.boundingBox();
+
   await page.evaluate(() => window.dcp.present('music'));
   await page.waitForTimeout(900);
-  (await isl.boundingBox()).width > 110 ? ok('grows for content') : bad('did not grow');
+  const grown = await isl.boundingBox();
+  const factor = grown.width / idle.width;
+  factor > 3 ? ok(`grows for content (${factor.toFixed(1)}× the idle width)`)
+             : bad(`barely grew: ${factor.toFixed(2)}× idle`);
 
   await page.evaluate(() => window.dcp.dismiss('music'));
   await page.waitForTimeout(1000);
   const back = await isl.boundingBox();
-  (Math.abs(back.width - back.height) < 9 && back.width < 45)
-    ? ok('shrinks back into the circle')
-    : bad(`did not return to the circle: ${Math.round(back.width)}×${Math.round(back.height)}`);
+  (Math.abs(back.width - back.height) < idle.width * 0.3
+      && Math.abs(back.width - idle.width) < 2)
+    ? ok('shrinks back to exactly the idle circle')
+    : bad(`did not return to the circle: ${Math.round(back.width)}×${Math.round(back.height)}`
+          + ` (idle was ${Math.round(idle.width)}×${Math.round(idle.height)})`);
 
   // The whole point of the centre-anchored model.
   const lens = await page.locator('.phone[data-variant="a"] .island__lens').first().boundingBox();

@@ -134,6 +134,24 @@ public class IslandStore {
         notifyChanged(true);
     }
 
+    /**
+     * Give back what can be given back.
+     *
+     * Artwork is the only thing here with real weight — a decoded avatar or album
+     * bitmap — and only the presentation actually on the pill needs its own. On a
+     * hard trim (the system itself is short) even that goes; the renderer falls
+     * back to the notification's small icon, which is a drawable the platform
+     * already holds, and the bitmap is re-supplied on the next post.
+     */
+    public void trim(boolean hard) {
+        Presentation visible = hard ? null : current();
+        if (alert != null && alert != visible) alert.art = null;
+        for (int i = 0; i < activities.size(); i++) {
+            Presentation p = activities.get(i);
+            if (p != visible) p.art = null;
+        }
+    }
+
     private int indexOf(String id) {
         for (int i = 0; i < activities.size(); i++) {
             if (activities.get(i).id.equals(id)) return i;
