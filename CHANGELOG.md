@@ -1,5 +1,63 @@
 # Changelog
 
+## v2.4.0 — pick what shows, and see what it costs
+
+**The memory floor is 45 MB.** The dial used to bottom out at 762 MB, which made
+no sense once the ballast was gone: the app's real working set is 30–45 MB and it
+never grows toward the ceiling. 45 MB is the point below which a limit stops
+limiting and starts handicapping. The top is unchanged — the RAM Android reports
+for the device, less the 1.5 GB system reserve.
+
+**A Capacity button, bottom right of the app.** Collapsed it is a small pill;
+tapped it expands into what the current ceiling actually buys — apps on the list,
+notifications held with their artwork, phone functions, and the headroom above
+the island's own footprint. Every figure derives from a real cost (a decoded
+avatar is 192×192 at four bytes a pixel; an app on the list is a package name)
+rather than an invented one. Even at the 45 MB floor that is over a hundred
+notifications. The panel also states plainly that the island shows at most two
+activities and one alert at once whatever the ceiling says — a design limit, not
+a memory one.
+
+**The two lists are additive now, with a + button each.** The apps picker lists
+**every app on the device with a launcher icon**, searchable, and adding one lets
+its notifications reach the island. The functions picker does the same for the
+kinds of content. An empty list means no restriction, and the card says so —
+two empty allow-lists on a fresh install would be an island that never appears,
+which anyone would read as broken.
+
+This still does **not** use `QUERY_ALL_PACKAGES`. It uses a `<queries>`
+declaration for the launcher intent, which grants sight of exactly the apps a
+person would recognise and nothing else — no services, no providers, no headless
+packages. Verified in the built APK: the `<queries>` element is present and the
+permission list is the same six as before.
+
+**Expanded views no longer get clipped.** `.island` is `overflow:hidden`, and the
+expanded height was measured with `getBoundingClientRect()` — which returns the
+*transformed* box. Freshly mounted content carries `.di-enter`, which animates
+from `scale(.97)`, so the island was measured up to 3% short of its own content
+and then cut the bottom off it. Measuring `offsetHeight` instead fixes every
+case: all 23 presentations now fit with nothing cut off, at both a desktop and a
+phone-width viewport, and that is a permanent check.
+
+**A drag inside the phone belongs to the phone.** `touch-action: none` on the
+screen stops the page scrolling out from under a gesture, while the home screen
+keeps `pan-y` so its own app grid still scrolls. Swipe up from the bottom strip,
+or inward from either side edge, to close an open app — inward being the
+operative word: from the left edge the finger travels right, from the right edge
+it travels left, and an outward flick is ignored.
+
+Tapping the body of an open app no longer closes it. An app you cannot touch
+without dismissing is not an app, and with the gestures in place there is no
+reason to overload a plain tap.
+
+**A signature at the bottom of both the app and the demo.**
+
+Verified: 31 browser assertions now, including the expanded-fit sweep over all 23
+presentations and eight gesture checks; both APKs signature-verified across
+API 24–34; Lint zero errors; `<queries>` and `PickerActivity` confirmed present in
+the built manifest; the capacity arithmetic checked against the compiled
+constants. Still not launched on a device here — no KVM in this environment.
+
 ## v2.3.0 — you choose what it shows
 
 **The overlay really does come down now.** v2.2.0 removed the window when the

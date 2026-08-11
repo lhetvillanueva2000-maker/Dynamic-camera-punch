@@ -1,6 +1,6 @@
 {
   "name": "dynamic-camera-punch",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "private": true,
   "description": "Tooling for the Dynamic Camera Punch demo. The demo itself has no dependencies — it is plain HTML, CSS and JS, and opens straight from the filesystem. Playwright is here only to drive the browser tests and regenerate docs/.",
   "scripts": {

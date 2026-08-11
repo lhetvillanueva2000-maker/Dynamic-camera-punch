@@ -47,8 +47,8 @@ public class MainActivity extends Activity {
     private Prefs prefs;
     private Sources sources;
 
-    private LinearLayout sourcesList, appsList;
-    private TextView appsDesc;
+    private LinearLayout sourcesList, appsList, capacityPanel;
+    private TextView appsDesc, functionsDesc, capacityButton, capacityBody, capacityNote;
 
     /** Set while we programmatically flip the switch, so listeners stay quiet. */
     private boolean binding;
@@ -76,14 +76,20 @@ public class MainActivity extends Activity {
         sourcesList = findViewById(R.id.sources_list);
         appsList = findViewById(R.id.apps_list);
         appsDesc = findViewById(R.id.apps_desc);
+        functionsDesc = findViewById(R.id.functions_desc);
+        capacityPanel = findViewById(R.id.capacity_panel);
+        capacityButton = findViewById(R.id.capacity_button);
+        capacityBody = findViewById(R.id.capacity_body);
+        capacityNote = findViewById(R.id.capacity_note);
 
-        findViewById(R.id.apps_reset).setOnClickListener(v -> {
-            sources.forgetAll();
-            Toast.makeText(this, R.string.apps_empty, Toast.LENGTH_SHORT).show();
-            bind();
+        findViewById(R.id.apps_add).setOnClickListener(v -> openPicker(PickerActivity.MODE_APPS));
+        findViewById(R.id.functions_add).setOnClickListener(
+                v -> openPicker(PickerActivity.MODE_FUNCTIONS));
+
+        capacityButton.setOnClickListener(v -> {
+            boolean open = capacityPanel.getVisibility() == View.VISIBLE;
+            capacityPanel.setVisibility(open ? View.GONE : View.VISIBLE);
         });
-
-        buildSourceRows();
         demoDesc = findViewById(R.id.demo_desc);
         demoButton = findViewById(R.id.demo_button);
         // Show the version on screen as well as in Settings, so "which build am
@@ -178,8 +184,9 @@ public class MainActivity extends Activity {
                 ? R.drawable.bg_pill_active : R.drawable.bg_pill);
         variantDesc.setText("a".equals(variant) ? R.string.variant_a_desc : R.string.variant_b_desc);
 
-        bindSourceRows();
+        buildFunctionRows();
         buildAppRows();
+        bindCapacity();
 
         alwaysSwitch.setChecked(prefs.isAlwaysVisible());
         alwaysDesc.setText(prefs.isAlwaysVisible() ? R.string.always_on : R.string.always_off);
@@ -204,15 +211,15 @@ public class MainActivity extends Activity {
 
     /* ── What the island shows ───────────────────────────────────────── */
 
-    /** One switch per Source, built once. Order here is the order on screen. */
-    private static final Sources.Source[] SOURCE_ORDER = {
+    /** Display order for the picker and the summary list. */
+    static final Sources.Source[] SOURCE_ORDER = {
             Sources.Source.MESSAGES, Sources.Source.MEDIA, Sources.Source.CALLS,
             Sources.Source.TIMERS, Sources.Source.NAVIGATION, Sources.Source.PROGRESS,
             Sources.Source.OTHER, Sources.Source.CHARGING, Sources.Source.BATTERY,
             Sources.Source.RINGER, Sources.Source.HEADPHONES
     };
 
-    private int labelFor(Sources.Source s) {
+    static int labelResFor(Sources.Source s) {
         switch (s) {
             case MESSAGES:   return R.string.src_messages;
             case MEDIA:      return R.string.src_media;
@@ -228,57 +235,54 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void buildSourceRows() {
-        sourcesList.removeAllViews();
-        for (Sources.Source s : SOURCE_ORDER) {
-            View row = toggleRow(getString(labelFor(s)), sources.isEnabled(s), on -> {
-                sources.setEnabled(s, on);
-                // A source switched off should not leave its last presentation
-                // sitting on the island until something else displaces it.
-                if (!on) DcpApp.get().store().clear();
-            });
-            row.setTag(s);
-            sourcesList.addView(row);
-        }
-    }
-
-    private void bindSourceRows() {
-        for (int i = 0; i < sourcesList.getChildCount(); i++) {
-            View row = sourcesList.getChildAt(i);
-            Object tag = row.getTag();
-            if (tag instanceof Sources.Source) {
-                Switch sw = row.findViewById(android.R.id.toggle);
-                sw.setChecked(sources.isEnabled((Sources.Source) tag));
-            }
-        }
+    private void openPicker(String mode) {
+        startActivity(new Intent(this, PickerActivity.class)
+                .putExtra(PickerActivity.EXTRA_MODE, mode));
     }
 
     /**
-     * One row per app the island has actually heard from.
+     * The picked functions, or nothing at all when the list is empty.
      *
-     * The list is learned from arriving notifications rather than enumerated, so
-     * this needs no QUERY_ALL_PACKAGES — and an app that has never sent anything
-     * is not a decision worth putting in front of anybody.
+     * An empty list means "no restriction", so listing all eleven rows would be
+     * a lie about what the user has chosen — the description says everything
+     * shows, and the list stays out of the way until there is a real selection.
      */
+    private void buildFunctionRows() {
+        sourcesList.removeAllViews();
+        boolean unrestricted = sources.functionsUnrestricted();
+        functionsDesc.setText(unrestricted ? R.string.functions_all : R.string.functions_some);
+        if (unrestricted) return;
+
+        for (Sources.Source s : SOURCE_ORDER) {
+            if (!sources.allowedFunctionKeys().contains(s.key)) continue;
+            sourcesList.addView(pickedRow(getString(labelResFor(s)), null, () -> {
+                sources.removeFunction(s);
+                DcpApp.get().store().clear();
+                bind();
+            }));
+        }
+    }
+
     private void buildAppRows() {
         appsList.removeAllViews();
-        java.util.Set<String> seen = sources.seen();
-        appsDesc.setText(seen.isEmpty() ? R.string.apps_empty : R.string.apps_desc);
-        findViewById(R.id.apps_reset).setVisibility(seen.isEmpty() ? View.GONE : View.VISIBLE);
+        boolean unrestricted = sources.appsUnrestricted();
+        appsDesc.setText(unrestricted ? R.string.apps_all : R.string.apps_some);
+        if (unrestricted) return;
 
-        for (String pkg : seen) {
+        for (String pkg : sources.allowedApps()) {
             final String p = pkg;
-            appsList.addView(toggleRow(appLabel(p), sources.isAppAllowed(p), on -> {
-                sources.setAppAllowed(p, on);
-                if (!on) DcpApp.get().store().clear();
+            appsList.addView(pickedRow(appLabel(p), appIcon(p), () -> {
+                sources.removeApp(p);
+                DcpApp.get().store().clear();
+                bind();
             }));
         }
     }
 
     /**
      * The app's display name when the platform will give it to us, and the
-     * package name when it will not. Since Android 11 package visibility can
-     * hide an app we have only ever seen through a notification, and a package
+     * package name when it will not. The manifest's <queries> declaration covers
+     * launcher-visible apps; anything outside that stays hidden, and a package
      * name is a worse label but an honest one.
      */
     private String appLabel(String pkg) {
@@ -290,13 +294,27 @@ public class MainActivity extends Activity {
         return pkg;
     }
 
-    /** A label on the left, a switch on the right. */
-    private View toggleRow(String label, boolean checked, java.util.function.Consumer<Boolean> onChange) {
+    private android.graphics.drawable.Drawable appIcon(String pkg) {
+        try { return getPackageManager().getApplicationIcon(pkg); }
+        catch (Exception e) { return null; }
+    }
+
+    /** A picked entry: optional icon, label, and a Remove control. */
+    private View pickedRow(String label, android.graphics.drawable.Drawable icon, Runnable onRemove) {
+        float d = getResources().getDisplayMetrics().density;
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(android.view.Gravity.CENTER_VERTICAL);
-        int pad = Math.round(6 * getResources().getDisplayMetrics().density);
-        row.setPadding(0, pad, 0, pad);
+        row.setPadding(0, Math.round(7 * d), 0, Math.round(7 * d));
+
+        if (icon != null) {
+            ImageView iv = new ImageView(this);
+            iv.setImageDrawable(icon);
+            int px = Math.round(28 * d);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(px, px);
+            lp.rightMargin = Math.round(10 * d);
+            row.addView(iv, lp);
+        }
 
         TextView tv = new TextView(this);
         tv.setText(label);
@@ -307,16 +325,33 @@ public class MainActivity extends Activity {
         row.addView(tv, new LinearLayout.LayoutParams(0,
                 LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
 
-        Switch sw = new Switch(this);
-        sw.setId(android.R.id.toggle);
-        sw.setChecked(checked);
-        sw.setMinWidth(0);
-        sw.setMinimumWidth(0);
-        sw.setOnCheckedChangeListener((b, v) -> { if (!binding) onChange.accept(v); });
-        row.addView(sw);
+        TextView rm = new TextView(this);
+        rm.setText(R.string.remove);
+        rm.setTextSize(12.5f);
+        rm.setTextColor(getColor(R.color.text_dim));
+        rm.setBackgroundResource(R.drawable.bg_pill);
+        rm.setPadding(Math.round(12 * d), Math.round(6 * d),
+                Math.round(12 * d), Math.round(6 * d));
+        rm.setOnClickListener(v -> onRemove.run());
+        row.addView(rm);
 
-        row.setOnClickListener(v -> sw.toggle());
+        row.setOnClickListener(v -> onRemove.run());
         return row;
+    }
+
+    /* ── Capacity readout ────────────────────────────────────────────── */
+
+    private void bindCapacity() {
+        MemoryBudget.Capacity c = memory.capacity();
+        capacityButton.setText(getString(R.string.capacity_button_fmt, c.notifications));
+        capacityBody.setText(getString(R.string.capacity_body_fmt,
+                MemoryBudget.readable(c.headroomBytes),
+                c.appsUncounted ? getString(R.string.capacity_apps_uncounted)
+                                : String.valueOf(c.apps),
+                c.notifications, c.functions));
+        capacityNote.setText(c.baseExceedsCeiling
+                ? getString(R.string.capacity_tight)
+                : getString(R.string.capacity_note));
     }
 
     private void wirePermissionRow(View row, int nameRes, int whyRes, View.OnClickListener onGrant) {

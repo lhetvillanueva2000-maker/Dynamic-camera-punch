@@ -304,3 +304,17 @@
   .screen-content,
   .dock { transition-duration: .01ms; }
 }
+
+/* ── Touch ownership ────────────────────────────────────────────────── */
+/* A drag that starts inside the phone belongs to the phone, not to the page.
+   Without this, swiping the device frame scrolls the document underneath it and
+   the gestures below never get a chance to run. The home screen opts back in to
+   vertical panning so its own app grid still scrolls, and overscroll-behavior
+   stops that scroll chaining out to the page when it hits an end. */
+.phone__screen { touch-action: none; }
+.screen-content { touch-action: pan-y; overscroll-behavior: contain; }
+
+/* Feedback while an edge or bottom swipe is being dragged. */
+.app-window.is-dismissing {
+  transition: transform .18s var(--ease-out), opacity .18s var(--ease-out);
+}

@@ -11,20 +11,19 @@ import java.util.TreeSet;
 /**
  * What the island is allowed to show.
  *
- * Two independent filters, both applied before anything reaches the store:
+ * Two lists you build up rather than two lists you prune. Add the functions you
+ * want and the apps you want, and those are what reaches the cutout.
  *
- *   By kind    — messages, media, calls, timers, navigation, downloads, other
- *                notifications, and the four permission-free system events.
- *                Everything is on by default; the island is opt-out, not opt-in.
+ * EMPTY MEANS EVERYTHING, and that matters. A fresh install with two empty
+ * allow-lists would be an island that never appears, and the user would
+ * reasonably conclude it was broken. So an empty list is "no restriction" and
+ * the control panel says exactly that; the moment the first entry is added, the
+ * list becomes a filter. This is the only sane reading of an additive picker
+ * that starts out empty.
  *
- *   By app     — a blocklist of package names. Apps are learned from the
- *                notifications that actually arrive, which is why this needs no
- *                QUERY_ALL_PACKAGES: an app the island has never heard from is
- *                not something the user needs to make a decision about.
- *
- * Kept separate from Prefs because this is the one setting group that grows —
- * a new source of content adds a constant here and a row in the control panel,
- * and nothing else has to change.
+ * Apps are stored as package names. The picker offers everything with a launcher
+ * icon, via a <queries> declaration in the manifest — not QUERY_ALL_PACKAGES,
+ * which this app still does not request and does not need.
  */
 public final class Sources {
 
@@ -44,14 +43,24 @@ public final class Sources {
 
         public final String key;
         Source(String key) { this.key = key; }
+
+        public static Source byKey(String k) {
+            for (Source s : values()) if (s.key.equals(k)) return s;
+            return null;
+        }
+
+        /** True for the four that need no permission whatsoever. */
+        public boolean isSystemFunction() {
+            return this == CHARGING || this == BATTERY || this == RINGER || this == HEADPHONES;
+        }
     }
 
     private static final String FILE = "dcp_sources";
-    private static final String K_BLOCKED = "blocked_packages";
+    private static final String K_FUNCTIONS = "allowed_functions";
+    private static final String K_APPS = "allowed_apps";
     private static final String K_SEEN = "seen_packages";
 
-    /** Never let the learned-app list grow without bound. */
-    private static final int MAX_SEEN = 120;
+    private static final int MAX_SEEN = 200;
 
     private static Sources instance;
 
@@ -66,40 +75,65 @@ public final class Sources {
         return instance;
     }
 
-    /* ── By kind ─────────────────────────────────────────────────────── */
+    /* ── Functions ───────────────────────────────────────────────────── */
+
+    public Set<String> allowedFunctionKeys() {
+        return unmodifiable(sp.getStringSet(K_FUNCTIONS, Collections.emptySet()));
+    }
+
+    /** True when nothing has been picked, so everything is allowed. */
+    public boolean functionsUnrestricted() { return allowedFunctionKeys().isEmpty(); }
 
     public boolean isEnabled(Source s) {
-        return sp.getBoolean("src_" + s.key, true);
+        Set<String> allowed = allowedFunctionKeys();
+        return allowed.isEmpty() || allowed.contains(s.key);
     }
 
-    public void setEnabled(Source s, boolean on) {
-        sp.edit().putBoolean("src_" + s.key, on).apply();
+    public void addFunction(Source s) {
+        Set<String> next = new LinkedHashSet<>(allowedFunctionKeys());
+        next.add(s.key);
+        sp.edit().putStringSet(K_FUNCTIONS, next).apply();
     }
 
-    /* ── By app ──────────────────────────────────────────────────────── */
+    public void removeFunction(Source s) {
+        Set<String> next = new LinkedHashSet<>(allowedFunctionKeys());
+        next.remove(s.key);
+        sp.edit().putStringSet(K_FUNCTIONS, next).apply();
+    }
+
+    /* ── Apps ────────────────────────────────────────────────────────── */
+
+    public Set<String> allowedApps() {
+        return unmodifiable(sp.getStringSet(K_APPS, Collections.emptySet()));
+    }
+
+    public boolean appsUnrestricted() { return allowedApps().isEmpty(); }
 
     public boolean isAppAllowed(String pkg) {
         if (pkg == null) return true;
-        return !blocked().contains(pkg);
+        Set<String> allowed = allowedApps();
+        return allowed.isEmpty() || allowed.contains(pkg);
     }
 
-    public void setAppAllowed(String pkg, boolean allowed) {
-        Set<String> b = new LinkedHashSet<>(blocked());
-        if (allowed) b.remove(pkg); else b.add(pkg);
-        sp.edit().putStringSet(K_BLOCKED, b).apply();
+    public void addApp(String pkg) {
+        if (pkg == null || pkg.isEmpty()) return;
+        Set<String> next = new LinkedHashSet<>(allowedApps());
+        next.add(pkg);
+        sp.edit().putStringSet(K_APPS, next).apply();
     }
 
-    public Set<String> blocked() {
-        // The returned set from getStringSet must not be modified — the docs are
-        // explicit that the instance is shared and the result is undefined.
-        return Collections.unmodifiableSet(
-                new LinkedHashSet<>(sp.getStringSet(K_BLOCKED, Collections.emptySet())));
+    public void removeApp(String pkg) {
+        Set<String> next = new LinkedHashSet<>(allowedApps());
+        next.remove(pkg);
+        sp.edit().putStringSet(K_APPS, next).apply();
     }
+
+    /* ── Learned packages ────────────────────────────────────────────── */
 
     /**
-     * Note that this package posted something the island could have shown, so it
-     * can be offered in the control panel. Cheap and idempotent: it only writes
-     * when the package is new.
+     * Note that this package posted something. No longer needed for the picker,
+     * which lists installed apps directly, but it is what lets the panel show
+     * "heard from" next to an app the user has actually received something from.
      */
     public void remember(String pkg) {
         if (pkg == null || pkg.isEmpty()) return;
@@ -111,13 +145,19 @@ public final class Sources {
         sp.edit().putStringSet(K_SEEN, next).apply();
     }
 
-    /** Apps the island has heard from, alphabetically by package. */
     public Set<String> seen() {
-        return Collections.unmodifiableSet(
-                new TreeSet<>(sp.getStringSet(K_SEEN, Collections.emptySet())));
+        return unmodifiable(new TreeSet<>(sp.getStringSet(K_SEEN, Collections.emptySet())));
     }
 
-    public void forgetAll() {
-        sp.edit().remove(K_SEEN).remove(K_BLOCKED).apply();
+    public void clearAll() {
+        sp.edit().remove(K_APPS).remove(K_FUNCTIONS).apply();
+    }
+
+    /**
+     * getStringSet hands back an instance the docs forbid modifying and whose
+     * contents are undefined after an edit, so every read is copied out first.
+     */
+    private static Set<String> unmodifiable(Set<String> s) {
+        return Collections.unmodifiableSet(new LinkedHashSet<>(s));
     }
 }

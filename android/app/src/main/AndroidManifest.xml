@@ -23,8 +23,10 @@
       without it the island still works from battery/ringer/headset broadcasts.
 
       Deliberately NOT requested:
-        QUERY_ALL_PACKAGES  — icons come from the notification itself, so we
-                              never need to enumerate installed apps.
+        QUERY_ALL_PACKAGES  — the app picker lists installed apps through the
+                              <queries> declaration below, which grants sight of
+                              launcher-visible apps only. Notification icons come
+                              from the notification itself either way.
         READ_PHONE_STATE    — call state is read from the dialer's own
                               notification instead of the telephony API.
         INTERNET            — the app has never made a network request.
@@ -51,6 +53,24 @@
         android:protectionLevel="signature" />
     <uses-permission android:name="${applicationId}.permission.INTERNAL" />
 
+    <!--
+      Package visibility for the app picker.
+
+      This is how you list installed apps on Android 11+ WITHOUT
+      QUERY_ALL_PACKAGES, which is a sensitive permission Google requires a
+      written justification for and which this app has never needed. Declaring
+      the launcher intent grants visibility of exactly the apps that have a
+      launcher icon — the ones a person would recognise and might want on the
+      island — and nothing else. Services, providers and headless packages stay
+      invisible to us, which is the correct amount of access for a picker.
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
     <application
         android:name=".DcpApp"
         android:allowBackup="true"
@@ -74,6 +94,14 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- The "+" picker: choose which apps and which kinds of content the
+             island is allowed to show. -->
+        <activity
+            android:name=".ui.PickerActivity"
+            android:exported="false"
+            android:label="@string/picker_apps_title"
+            android:theme="@style/Theme.Dcp" />
 
         <!--
           The live demonstration: the original WebView sandbox. It is a separate

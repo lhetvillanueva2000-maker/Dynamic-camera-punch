@@ -67,7 +67,7 @@ DI.Phone = (function () {
           '<i style="width:47%"></i><i style="width:75%"></i><i style="width:58%"></i>' +
         '</div>' +
       '</div>' +
-      '<div class="app-window__hint">swipe up or tap the bar to close</div>' +
+      '<div class="app-window__hint">swipe up, swipe in from an edge, or tap the bar to close</div>' +
     '</div>';
 
   /* The island's own markup: a gooey blob layer and a matching surface layer.
@@ -247,9 +247,10 @@ DI.Phone = (function () {
     figure.addEventListener('click', function (e) {
       var t = e.target.closest('.app[data-app]');
       if (t && !openName) { open(t); return; }
-      if (openName && (e.target.closest('[data-homebar]') || e.target.closest('.app-window'))) {
-        close();
-      }
+      // The home bar closes an open app. Tapping the app itself does NOT: an app
+      // you cannot touch without dismissing is not an app, and now that the
+      // swipe gestures exist there is no reason to overload a plain tap.
+      if (openName && e.target.closest('[data-homebar]')) close();
     });
 
     figure.addEventListener('keydown', function (e) {
@@ -257,6 +258,58 @@ DI.Phone = (function () {
       var t = e.target.closest('.app[data-app]');
       if (t && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); open(t); }
     });
+
+    /* ── Gestures ───────────────────────────────────────────────────
+       A drag that starts inside the phone belongs to the phone. The CSS
+       hands us the touch (see .phone__screen{touch-action:none}); this
+       decides what it meant.
+
+         swipe up from the bottom strip   → close the open app
+         swipe inward from either edge    → close the open app
+
+       Inward is the operative word on the edges: from the LEFT edge the
+       finger travels right, and from the RIGHT edge it travels left. A
+       leftward flick at the left edge is someone reaching past the phone,
+       not asking it for anything.
+
+       The island owns its own gestures, so anything starting on it is left
+       well alone. */
+    var EDGE = 0.14;        // fraction of the width that counts as an edge
+    var BOTTOM = 0.18;      // fraction of the height that counts as the strip
+    var MIN_PX = 42;        // below this it is a tap, not a swipe
+
+    var g = null;
+
+    function pointIn(e) {
+      var r = screen.getBoundingClientRect();
+      return { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height,
+               px: e.clientX, py: e.clientY };
+    }
+
+    screen.addEventListener('pointerdown', function (e) {
+      if (e.target.closest('.island-root')) { g = null; return; }
+      var p = pointIn(e);
+      g = { x0: p.px, y0: p.py, fx: p.x, fy: p.y, done: false };
+    });
+
+    screen.addEventListener('pointermove', function (e) {
+      if (!g || g.done || !openName) return;
+      var dx = e.clientX - g.x0, dy = e.clientY - g.y0;
+
+      var fromBottom = g.fy > 1 - BOTTOM && dy < -MIN_PX && Math.abs(dy) > Math.abs(dx);
+      var fromLeft   = g.fx < EDGE && dx > MIN_PX && Math.abs(dx) > Math.abs(dy);
+      var fromRight  = g.fx > 1 - EDGE && dx < -MIN_PX && Math.abs(dx) > Math.abs(dy);
+
+      if (fromBottom || fromLeft || fromRight) {
+        g.done = true;
+        close();
+      }
+    });
+
+    function endGesture() { g = null; }
+    screen.addEventListener('pointerup', endGesture);
+    screen.addEventListener('pointercancel', endGesture);
+    screen.addEventListener('pointerleave', endGesture);
 
     if (homebar) homebar.setAttribute('title', 'Close the open app');
     return { open: open, close: close, isOpen: function () { return !!openName; } };

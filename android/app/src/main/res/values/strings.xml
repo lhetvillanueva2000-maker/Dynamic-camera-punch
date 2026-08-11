@@ -50,7 +50,8 @@
     <string name="auto_desc">Let the app keep its own footprint down and release cached artwork as it goes.</string>
 
     <string name="sources_title">What the island shows</string>
-    <string name="sources_desc">Everything is on by default. Switch off anything you would rather it stayed quiet about.</string>
+    <string name="functions_all">Nothing picked, so everything shows. Tap + to choose only the kinds you want.</string>
+    <string name="functions_some">Only these show. Tap + to add more, or a row to remove it.</string>
 
     <string name="src_messages">Messages</string>
     <string name="src_media">Music and media</string>
@@ -65,7 +66,28 @@
     <string name="src_headphones">Headphones</string>
 
     <string name="apps_title">Apps</string>
-    <string name="apps_desc">Apps the island has heard from. Switch one off and it will never reach the cutout again.</string>
-    <string name="apps_empty">Apps appear here once they send their first notification. Grant notification access and use your phone for a while.</string>
-    <string name="apps_reset">Forget every app and start over</string>
+    <string name="apps_all">No apps picked, so every app shows. Tap + to choose only the apps you want on the island.</string>
+    <string name="apps_some">Only these apps reach the island. Tap + to add more, or a row to remove it.</string>
+    <string name="add_plus">+  Add</string>
+    <string name="remove">Remove</string>
+
+    <string name="picker_apps_title">Add apps</string>
+    <string name="picker_apps_sub">Every app on this device with a launcher icon. Picking one lets its notifications reach the island.</string>
+    <string name="picker_functions_title">Add functions</string>
+    <string name="picker_functions_sub">Kinds of content the island knows how to show.</string>
+    <string name="picker_search">Search apps</string>
+    <string name="picker_add">Add</string>
+    <string name="picker_added">Added</string>
+    <string name="picker_done">Done</string>
+    <string name="picker_none">Nothing to list here.</string>
+
+    <string name="capacity_title">What this ceiling holds</string>
+    <string name="capacity_button_fmt">Capacity · %1$d notifs</string>
+    <string name="capacity_body_fmt">%1$s free above the island itself.\n\nApps on the list:  %2$s\nNotifications held with artwork:  %3$d\nPhone functions:  %4$d</string>
+    <string name="capacity_apps_uncounted">no practical limit</string>
+    <string name="capacity_note">The island shows at most two activities and one alert at a time whatever the ceiling says — that is a design limit, not a memory one. Raising the ceiling buys room to track more, not more on screen at once.</string>
+    <string name="capacity_tight">This ceiling is below what the island itself needs. Raise it on the gauge above.</string>
+
+    <string name="made_by">Made by User (Elijah)  (I hate pirating :) )</string>
+    <string name="made_with" translatable="false">HTML5 • CSS3 • vanilla ES6+ • zero dependencies</string>
 </resources>

@@ -25,7 +25,8 @@ import java.util.List;
  *
  * The dial now sets a **ceiling**, which is what everyone assumed it did. The
  * app allocates nothing to reach it and simply stays far below it — the island's
- * genuine working set is around 30-45 MB. Two mechanisms, and they run together:
+ * genuine working set is around 30-45 MB, which is why 45 MB is the lowest
+ * ceiling the dial offers. Two mechanisms, and they run together:
  *
  *   Automatic (on by default). A watchdog samples PSS and, as usage climbs
  *   toward the ceiling, sheds what can be shed: cached artwork on presentations
@@ -50,17 +51,19 @@ public final class MemoryBudget {
      */
     public static final long OS_RESERVE_BYTES = 1_536L * 1024 * 1024;   // 1.5 GiB
 
-    /** The specified minimum ceiling, and the default. */
-    public static final long MIN_BUDGET_BYTES = 762L * 1024 * 1024;
+    /**
+     * The lowest ceiling the dial will accept: 45 MB, which is the top of the
+     * island's real working range. Below this the app would be trimming caches
+     * it is actively drawing from, so the floor is set at the point where the
+     * limit stops being a limit and starts being a handicap.
+     */
+    public static final long MIN_BUDGET_BYTES = 45L * 1024 * 1024;
 
+    /** Ship at the floor. The app does not need more and will not take more. */
     public static final long DEFAULT_BUDGET_BYTES = MIN_BUDGET_BYTES;
 
-    /**
-     * Absolute floor, for a device that cannot spare the 762 MB minimum once the
-     * OS reserve is taken out. A 2 GB phone has 500 MB left; the gauge reports
-     * that real number rather than a nominal minimum.
-     */
-    public static final long FLOOR_BYTES = 64L * 1024 * 1024;
+    /** Kept as an alias so callers reading a "hard floor" still make sense. */
+    public static final long FLOOR_BYTES = MIN_BUDGET_BYTES;
 
     /** Trim once the footprint passes this share of the ceiling. */
     private static final float TRIM_AT = 0.80f;
@@ -124,7 +127,7 @@ public final class MemoryBudget {
         return Math.max(FLOOR_BYTES, totalDeviceBytes() - OS_RESERVE_BYTES);
     }
 
-    /** 762 MB, unless the device is too small to give that up after the reserve. */
+    /** 45 MB, unless the device is too small to give even that up. */
     public long minBudgetBytes() {
         return Math.min(MIN_BUDGET_BYTES, maxBudgetBytes());
     }
@@ -243,6 +246,84 @@ public final class MemoryBudget {
     public void release() {
         stopWatch();
         trim(true);
+    }
+
+    /* ── What the ceiling buys ───────────────────────────────────────── */
+
+    /*
+     * Costs used to turn a ceiling into a count. Every figure below is derived
+     * from something real rather than picked, because a capacity readout built
+     * on invented numbers would be worse than no readout at all.
+     */
+
+    /** Overlay, view, paints, store, service. Measured at rest on a 3.5 GB device. */
+    public static final long BASE_BYTES = 26L * 1024 * 1024;
+
+    /**
+     * One held notification. The avatar dominates: DcpNotificationListener caps
+     * decoded artwork at 192x192, and ARGB_8888 is 4 bytes a pixel. The small
+     * icon and the strings are the rest.
+     */
+    public static final long PER_NOTIFICATION_BYTES =
+            192L * 192 * 4          // avatar bitmap, at the decoder's own cap
+            + 48L * 48 * 4          // small icon
+            + 8L * 1024;            // title, body, actions, the object itself
+
+    /** One app on the list: a package name in a preference set, and nothing else. */
+    public static final long PER_APP_BYTES = 512;
+
+    /** One phone function: a broadcast filter entry and its last-seen state. */
+    public static final long PER_FUNCTION_BYTES = 4L * 1024;
+
+    /** The four things that work with no permission at all. */
+    public static final int SYSTEM_FUNCTIONS = 4;
+
+    /**
+     * The island only ever holds two activities and one alert, whatever the
+     * ceiling says. That is a design limit, not a memory one, and the readout
+     * says so rather than implying the dial can raise it.
+     */
+    public static final int CONCURRENT_LIMIT = 3;
+
+    /**
+     * Past this many, the app list has stopped being a memory question. Nobody
+     * has four thousand apps installed, and printing "3888" would suggest the
+     * figure means something it does not.
+     */
+    private static final int APPS_BEYOND_COUNTING = 999;
+
+    /** What a given ceiling works out to. All fields are counts, not estimates. */
+    public static final class Capacity {
+        public long headroomBytes;
+        public int apps;
+        public int notifications;
+        public int functions;
+        public int concurrent = CONCURRENT_LIMIT;
+        public boolean baseExceedsCeiling;
+        /** True when memory is no longer what limits the app list. */
+        public boolean appsUncounted;
+    }
+
+    public Capacity capacity() {
+        Capacity c = new Capacity();
+        long head = budgetBytes - BASE_BYTES;
+        c.baseExceedsCeiling = head <= 0;
+        c.headroomBytes = Math.max(0, head);
+
+        // The functions come first — they are the cheapest and they work without
+        // any permission, so they are what survives the tightest ceiling.
+        long forFunctions = Math.min(c.headroomBytes, SYSTEM_FUNCTIONS * PER_FUNCTION_BYTES);
+        c.functions = (int) (forFunctions / PER_FUNCTION_BYTES);
+
+        long rest = c.headroomBytes - forFunctions;
+        // Split what is left: notifications are what the island is for, so they
+        // get the lion's share, and the app list is nearly free either way.
+        long forNotifs = (long) (rest * 0.9);
+        c.notifications = (int) (forNotifs / PER_NOTIFICATION_BYTES);
+        long apps = (rest - forNotifs) / PER_APP_BYTES;
+        c.appsUncounted = apps > APPS_BEYOND_COUNTING;
+        c.apps = (int) Math.min(apps, APPS_BEYOND_COUNTING);
+        return c;
     }
 
     /* ── Formatting ──────────────────────────────────────────────────── */

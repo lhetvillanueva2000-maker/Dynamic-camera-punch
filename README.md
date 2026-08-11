@@ -4,7 +4,7 @@
 
 # Dynamic Camera Punch
 
-### v2.3.0 — the theme
+### v2.4.0 — the theme
 
 **A Dynamic Island for your Android punch-hole — running over every app on the phone.**
 
@@ -62,6 +62,10 @@ no state change can slide the hole off the physical sensor.
 | **Swipe ← / →** | Swap the two concurrent activities |
 | **Swipe ↓ / ↑** | Expand / collapse |
 
+In the demonstration, a drag that starts inside the phone belongs to the phone
+rather than scrolling the page. Swipe up from the bottom, or inward from either
+side edge, to close an open app.
+
 ## Memory
 
 **The app now stays out of your way instead of filling a quota.** Its real
@@ -77,12 +81,22 @@ Two mechanisms, and they work together:
 | **Manage memory automatically** (on by default) | The app watches its own footprint and releases what it can — cached avatars and artwork for anything not currently on the pill — and acts on every system memory warning, not just the critical one. |
 | **The ceiling** (the gauge) | A hard limit you set by dragging the needle. Crossing 80% of it triggers the same trim early. It is a limit, not a target: the app will not grow to fill it. |
 
-The range runs from **762 MB** up to **the RAM Android reports for your device,
-minus 1.5 GB reserved for the system**. Note that Android reports rather less
-than the number on the box — a "4 GB" phone typically reports about 3.5 GB, so
-its ceiling tops out near 2.0 GB. A device too small to give up 762 MB after the
-reserve gets its real ceiling reported instead of a nominal minimum it would be
-killed for honouring.
+The range runs from **45 MB** — the top of the island's real working set, and
+the point below which a limit stops limiting and starts handicapping — up to
+**the RAM Android reports for your device, minus 1.5 GB reserved for the
+system**. Android reports rather less than the number on the box: a "4 GB" phone
+typically reports about 3.5 GB, so its ceiling tops out near 2.0 GB.
+
+Tap **Capacity** at the bottom right of the app to see what the ceiling you have
+chosen actually buys — how many apps can be on the list, how many notifications
+can be held with their artwork, how many phone functions. Even at the 45 MB
+floor that is over a hundred notifications; the numbers come from real costs (a
+decoded avatar is 192×192 at 4 bytes a pixel, an app on the list is a package
+name) rather than from invented ones.
+
+The island still shows at most two activities and one alert at a time whatever
+the ceiling says. That is a design limit, not a memory one, and the readout says
+so rather than implying the dial can raise it.
 
 The gauge draws the ceiling and the *measured* footprint on the same scale, read
 from the same source `adb shell dumpsys meminfo` uses, so the two can always be
@@ -99,16 +113,25 @@ compared. On a healthy install the needle sits far above a very short green band
 
 ## Choosing what it shows
 
-The island is opt-out, not opt-in: everything is on to begin with, and the app's
-**What the island shows** card has a switch for each kind of content — messages,
-music, calls, timers, navigation, downloads, other notifications, and the four
-permission-free system events.
+Two lists you build up, both in the app, both with a **+** button.
 
-Underneath it, **Apps** lists every app the island has actually heard from, each
-with its own switch. Turn one off and it will never reach the cutout again. The
-list is *learned from arriving notifications* rather than enumerated, which is why
-this needs no `QUERY_ALL_PACKAGES`: an app that has never sent anything is not a
-decision worth putting in front of you.
+**What the island shows** — the kinds of content: messages, music and media,
+calls, timers and alarms, navigation, downloads, other notifications, and the
+four permission-free system events.
+
+**Apps** — the picker lists **every app on your device with a launcher icon**,
+searchable. Add one and its notifications reach the island.
+
+An **empty list means no restriction**, and the app says so on the card. That
+matters: two empty allow-lists on a fresh install would be an island that never
+appears, which anyone would reasonably read as broken. The moment you add your
+first entry the list becomes a filter, and only what you have picked gets
+through.
+
+> The app picker still does **not** use `QUERY_ALL_PACKAGES`. It uses a
+> `<queries>` declaration for the launcher intent, which grants sight of exactly
+> the apps that have a launcher icon — the ones you would recognise — and nothing
+> else. Services, providers and headless packages stay invisible to it.
 
 ## Keeping the island on screen
 
@@ -144,7 +167,7 @@ system instead of leaving a fattened heap inside the process that hosts the over
 ## Install
 
 ```bash
-adb install -r dist/dcp-v2.3.0-release.apk
+adb install -r dist/dcp-v2.4.0-release.apk
 ```
 
 Every launchable file names its own version, so there is never any doubt about
@@ -152,9 +175,9 @@ which build is in front of you:
 
 | File | What it is | Size |
 |---|---|---|
-| `dcp-v2.3.0-release.apk` | The theme. **Install this.** | 132,944 bytes |
-| `dcp-v2.3.0-debug.apk` | Same app built unoptimised, signed with the Android debug key and installed as `com.dcp.punch.debug` under the name **DCP (debug)**. Only useful if you are attaching a debugger; it sits alongside the release build rather than replacing it. | 177,754 bytes |
-| `web/dynamic-camera-punch-v2.3.0.html` | The demonstration, openable in any browser. | — |
+| `dcp-v2.4.0-release.apk` | The theme. **Install this.** | 140,116 bytes |
+| `dcp-v2.4.0-debug.apk` | Same app built unoptimised, signed with the Android debug key and installed as `com.dcp.punch.debug` under the name **DCP (debug)**. Only useful if you are attaching a debugger; it sits alongside the release build rather than replacing it. | 189,406 bytes |
+| `web/dynamic-camera-punch-v2.4.0.html` | The demonstration, openable in any browser. | — |
 
 ### Check the download before you install it
 
@@ -164,15 +187,15 @@ corrupt. The size column above is the quickest tell — a few KB means you got a
 web page. To be certain:
 
 ```
-sha256  release  cecedbe366288a4085dd3fc39be25a0f0c06608efed077bfc73c919709abba1c
-sha256  debug    88dcf1ef686654b83ddb6dc0821ca2c6af6c33963f76c77d5ef6efe87f3757fb
+sha256  release  d3d717396f0a25d70566dc5b925104d711fb016f1e494bdd9974632514513110
+sha256  debug    b1fb83724e1a77e0ad3636d66d7dec153540d8bd6c2ddd982b0fa180ec92ed9f
 ```
 
 Both are signed with APK Signature Scheme v2 and verify with `apksigner verify`
 across the whole supported range, API 24 to 34.
 
 The version also appears in the app's own header, and in Android's app info as
-version 2.3.0 (code 6). See [CHANGELOG.md](CHANGELOG.md) for what changed.
+version 2.4.0 (code 7). See [CHANGELOG.md](CHANGELOG.md) for what changed.
 
 Then open the app and work down the setup list:
 
@@ -184,7 +207,7 @@ Then open the app and work down the setup list:
 3. **Show notifications** — Android requires an ongoing notification for a service
    that runs indefinitely. That notice is also how you turn the theme off.
 
-Minimum Android 7.0 (API 24). ~133 KB on disk, ~30–45 MB resident. No network access.
+Minimum Android 7.0 (API 24). ~140 KB on disk, ~30–45 MB resident. No network access.
 
 ## Permissions, and why each one is there
 
@@ -198,6 +221,7 @@ Nothing is requested speculatively — every entry is read by code in this app.
 | `RECEIVE_BOOT_COMPLETED` | Optional "start on boot", off by default. |
 | `BIND_NOTIFICATION_LISTENER_SERVICE` | Read notifications and media sessions. User-granted in Settings, revocable at any time. |
 | `${applicationId}.permission.INTERNAL` | Our own signature-level permission, guarding one private broadcast between our two processes. Named after the application id rather than hard-coded, so the debug build declares its own and the two can coexist on one device. |
+| `<queries>` (not a permission) | Lets the app picker list apps that have a launcher icon. This is the sanctioned alternative to `QUERY_ALL_PACKAGES` and grants far less. |
 
 **Deliberately not requested:** `QUERY_ALL_PACKAGES` (icons come from the
 notification itself), `READ_PHONE_STATE` (call state is read from the dialer's
@@ -214,7 +238,7 @@ android/app/src/main/java/com/dcp/punch/
   BootReceiver.java           optional restart-on-boot
   data/
     Presentation.java         one thing the island can show
-    Sources.java              what the island is allowed to show, by kind and by app
+    Sources.java              the two allow-lists: kinds, and apps
     IslandStore.java          state: an alert over a stack of ≤2 activities
     DcpNotificationListener.java   real notifications → presentations
     MediaMonitor.java         MediaSession → live track + transport controls
@@ -228,6 +252,7 @@ android/app/src/main/java/com/dcp/punch/
   ui/
     MainActivity.java         control panel
     MemoryGaugeView.java      the speedometer, in the app rather than on the edge
+    PickerActivity.java       the "+" picker: installed apps, and kinds of content
     DemoActivity.java         the WebView sandbox, in its own process
 
 web/                          the demonstration — also opens in any browser

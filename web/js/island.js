@@ -282,7 +282,14 @@ DI.Island = (function () {
       w = Math.min(340, rootW - 28);
       this.content.classList.add('is-expanded-plate');
       this.content.style.width = (w - PAD_X * 2) + 'px';
-      h = Math.ceil(this.content.getBoundingClientRect().height) + PAD_TOP_EXP + PAD_BOT_EXP;
+      // offsetHeight, NOT getBoundingClientRect().height. Freshly mounted
+      // expanded content carries .di-enter, which animates from scale(.97), and
+      // getBoundingClientRect reports the *transformed* box — so the island was
+      // measured up to 3% short of its own content and then clipped it, because
+      // .island is overflow:hidden. offsetHeight is the layout box and ignores
+      // transforms entirely. scrollHeight covers anything that still overflows.
+      h = Math.max(this.content.offsetHeight, this.content.scrollHeight)
+          + PAD_TOP_EXP + PAD_BOT_EXP;
       radius = 34;
 
     } else {

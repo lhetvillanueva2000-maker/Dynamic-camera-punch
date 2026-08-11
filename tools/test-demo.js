@@ -19,7 +19,7 @@ const fs = require('fs');
 const { chromium } = require('playwright');
 
 const ROOT = path.resolve(__dirname, '..');
-const PAGE = 'file://' + path.join(ROOT, 'web', 'dynamic-camera-punch-v2.3.0.html');
+const PAGE = 'file://' + path.join(ROOT, 'web', 'dynamic-camera-punch-v2.4.0.html');
 
 let fails = 0;
 const ok = (m) => console.log('  ✓ ' + m);
@@ -133,9 +133,134 @@ async function idleGeometry(page) {
   off < 1.5 ? ok(`lens dead centre (${off.toFixed(2)} px off)`) : bad(`lens drifted ${off.toFixed(2)} px`);
 }
 
+/**
+ * Every expanded presentation must fit inside the island.
+ *
+ * .island is overflow:hidden, so a plate measured even a pixel short has its
+ * bottom row of text or its action buttons silently cut off. This walks all 23
+ * presentations and compares every descendant's box against the island's.
+ */
+async function expandedFits(page) {
+  console.log('Expanded views fit inside the island');
+  await page.goto(PAGE);
+  await page.waitForTimeout(800);
+
+  const ids = await page.evaluate(() =>
+    DI.Registry.alerts.concat(DI.Registry.activities).map(d => d.id));
+  const clipped = [];
+
+  for (const id of ids) {
+    await page.evaluate(i => window.dcp.present(i), id);
+    await page.waitForTimeout(380);
+    await page.evaluate(() => window.dcp.expand());
+    await page.waitForTimeout(700);
+
+    const over = await page.evaluate(() => {
+      const isl = document.querySelector('[data-island]');
+      const box = isl.getBoundingClientRect();
+      let worst = 0;
+      isl.querySelectorAll('*').forEach(el => {
+        const b = el.getBoundingClientRect();
+        if (!b.width || !b.height) return;
+        worst = Math.max(worst, b.bottom - box.bottom, b.right - box.right, box.left - b.left);
+      });
+      return +worst.toFixed(1);
+    });
+    if (over > 1) clipped.push(`${id} (+${over}px)`);
+
+    await page.evaluate(() => window.dcp.collapse());
+    await page.waitForTimeout(260);
+    await page.evaluate(i => window.dcp.dismiss(i), id);
+    await page.waitForTimeout(200);
+  }
+
+  clipped.length
+    ? bad(`${clipped.length} of ${ids.length} expanded views are clipped: ${clipped.join(', ')}`)
+    : ok(`all ${ids.length} expanded views fit with nothing cut off`);
+}
+
+/** A drag that starts inside the phone belongs to the phone. */
+async function gestures(page) {
+  console.log('Gestures inside the phone');
+  await page.goto(PAGE);
+  await page.waitForTimeout(800);
+  await page.locator('.phone__screen').first().scrollIntoViewIfNeeded();
+  await page.waitForTimeout(300);
+
+  const scr = await page.locator('.phone__screen').first().boundingBox();
+  const vp = page.viewportSize();
+  if (scr.y + scr.height > vp.height) {
+    bad('phone bottom is below the viewport — the gesture checks cannot reach it');
+    return;
+  }
+
+  const win = page.locator('[data-app-window]').first();
+  const isOpen = async () => (await win.evaluate(e => e.className)).includes('is-open');
+
+  const ta = await page.evaluate(() => ({
+    screen: getComputedStyle(document.querySelector('.phone__screen')).touchAction,
+    content: getComputedStyle(document.querySelector('.screen-content')).touchAction
+  }));
+  ta.screen === 'none' ? ok('the phone claims the touch') : bad(`screen touch-action ${ta.screen}`);
+  ta.content === 'pan-y' ? ok('its home screen still scrolls internally')
+                         : bad(`content touch-action ${ta.content}`);
+
+  async function drag(x0, y0, x1, y1) {
+    await page.mouse.move(x0, y0);
+    await page.mouse.down();
+    for (let i = 1; i <= 8; i++) {
+      await page.mouse.move(x0 + (x1 - x0) * i / 8, y0 + (y1 - y0) * i / 8);
+    }
+    await page.mouse.up();
+    await page.waitForTimeout(750);
+  }
+  async function openApp() {
+    await page.locator('.app[data-app="Camera"]').first().click();
+    await page.waitForTimeout(700);
+  }
+
+  await openApp();
+  await drag(scr.x + scr.width / 2, scr.y + scr.height - 14,
+             scr.x + scr.width / 2, scr.y + scr.height - 140);
+  (await isOpen()) ? bad('swipe up from the bottom did not close the app')
+                   : ok('swipe up from the bottom closes the app');
+
+  await openApp();
+  await drag(scr.x + 6, scr.y + scr.height / 2, scr.x + 130, scr.y + scr.height / 2);
+  (await isOpen()) ? bad('inward swipe from the left edge did nothing')
+                   : ok('left edge, swiped inward, closes the app');
+
+  await openApp();
+  await drag(scr.x + scr.width - 6, scr.y + scr.height / 2,
+             scr.x + scr.width - 130, scr.y + scr.height / 2);
+  (await isOpen()) ? bad('inward swipe from the right edge did nothing')
+                   : ok('right edge, swiped inward, closes the app');
+
+  // Direction matters: outward at an edge is someone reaching past the phone.
+  await openApp();
+  await drag(scr.x + 8, scr.y + scr.height / 2, scr.x - 90, scr.y + scr.height / 2);
+  (await isOpen()) ? ok('outward swipe at an edge is ignored')
+                   : bad('outward swipe closed the app — direction is not being checked');
+
+  await drag(scr.x + scr.width / 2, scr.y + scr.height * 0.45,
+             scr.x + scr.width / 2, scr.y + scr.height * 0.2);
+  (await isOpen()) ? ok('a drag across the middle does not dismiss')
+                   : bad('mid-screen drag closed the app');
+
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await drag(scr.x + scr.width / 2, scr.y + scr.height * 0.6,
+             scr.x + scr.width / 2, scr.y + scr.height * 0.15);
+  const scrolled = await page.evaluate(() => window.scrollY);
+  scrolled === 0 ? ok('the page does not scroll from a drag inside the phone')
+                 : bad(`the page scrolled to ${scrolled}`);
+
+  await page.locator('[data-homebar]').first().click();
+  await page.waitForTimeout(700);
+}
+
 (async () => {
   const browser = await chromium.launch(launchOptions());
-  const page = await browser.newPage({ viewport: { width: 1400, height: 950 } });
+  const page = await browser.newPage({ viewport: { width: 1400, height: 1200 } });
 
   const noise = [];
   page.on('pageerror', e => noise.push('pageerror: ' + e.message));
@@ -144,6 +269,8 @@ async function idleGeometry(page) {
   try {
     await appLaunching(page);
     await idleGeometry(page);
+    await expandedFits(page);
+    await gestures(page);
     noise.length ? noise.forEach(bad) : ok('no console or page errors throughout');
   } finally {
     await browser.close();
