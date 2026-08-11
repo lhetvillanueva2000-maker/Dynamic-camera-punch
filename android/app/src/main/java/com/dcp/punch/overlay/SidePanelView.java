@@ -40,9 +40,14 @@ public class SidePanelView extends View {
 
     private static final float HANDLE_W = 7;      // dp, collapsed
     private static final float HANDLE_H = 74;
-    private static final float RADIUS = 168;      // dp, open
-    private static final float TRACK_INSET = 30;
+    private static final float RADIUS = 196;      // dp, open
+    private static final float TRACK_INSET = 26;
     private static final long ANIM_MS = 380;
+
+    /** Bottom → left → top: the half-disc's flat side is the screen edge. */
+    private static final float START_ANGLE = 90, SWEEP = 180;
+    private static final int TICKS = 40;
+    private static final int TICK_MAJOR_EVERY = 8;
 
     private final float d;
     private final MemoryBudget budget;
@@ -59,6 +64,11 @@ public class SidePanelView extends View {
     // while the dial is open.
     private final Path bodyPath = new Path();
     private final Paint edge = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint tick = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint needle = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+    /** Cached PSS, refreshed twice a second — reading it every frame is not free. */
+    private long lastActual;
 
     /** 0 = collapsed handle, 1 = fully open dial. */
     private float open;
@@ -83,7 +93,13 @@ public class SidePanelView extends View {
 
         arc.setStyle(Paint.Style.STROKE);
         arc.setStrokeCap(Paint.Cap.ROUND);
-        arc.setStrokeWidth(9 * d);
+        arc.setStrokeWidth(6 * d);
+
+        tick.setStyle(Paint.Style.STROKE);
+        tick.setStrokeCap(Paint.Cap.ROUND);
+
+        needle.setStyle(Paint.Style.STROKE);
+        needle.setStrokeCap(Paint.Cap.ROUND);
 
         big.setColor(Color.WHITE);
         big.setTextSize(27 * d);
@@ -96,21 +112,35 @@ public class SidePanelView extends View {
         tiny.setTextSize(10.5f * d);
 
         t = fractionOf(budget.getBudgetBytes());
+        lastActual = budget.actualUsageBytes();
     }
 
     /* ── Budget ↔ arc fraction ───────────────────────────────────────── */
 
     private float fractionOf(long bytes) {
-        long min = MemoryBudget.MIN_BUDGET_BYTES;
+        long min = budget.minBudgetBytes();
         long max = budget.maxBudgetBytes();
         if (max <= min) return 0f;
         return Math.max(0f, Math.min(1f, (bytes - min) / (float) (max - min)));
     }
 
     private long bytesOf(float fraction) {
-        long min = MemoryBudget.MIN_BUDGET_BYTES;
+        long min = budget.minBudgetBytes();
         long max = budget.maxBudgetBytes();
         return min + (long) (fraction * (max - min));
+    }
+
+    /** Big readout: MB while it still reads cleanly, GB once it does not. */
+    private static String readout(long bytes) {
+        long mb = bytes / (1024 * 1024);
+        return mb < 1024 ? mb + " MB" : MemoryBudget.gb(bytes);
+    }
+
+    /** Tick labels stay terse — "1.5" beats "1.5 GB" twelve times round an arc. */
+    private static String gbTick(long bytes) {
+        double g = bytes / (1024.0 * 1024 * 1024);
+        return g < 1 ? (bytes / (1024 * 1024)) + "M"
+                     : String.format(java.util.Locale.US, "%.1f", g);
     }
 
     /* ── Open / close ────────────────────────────────────────────────── */
@@ -182,54 +212,94 @@ public class SidePanelView extends View {
         if (open < 0.55f) return;     // text only once there is room for it
         int alpha = (int) (255 * Math.min(1f, (open - 0.55f) / 0.45f));
 
-        // Arc track: bottom → left → top is startAngle 90, sweep 180.
+        // ── The gauge ────────────────────────────────────────────────
+        // A speedometer rather than a slider: graduated ticks around the arc,
+        // labelled at the majors, and a needle swinging from a hub on the screen
+        // edge. The pivot sits at the flat side, so the whole fan opens leftward
+        // into the screen and the readout sits inside it.
         float trackR = radius - TRACK_INSET * d;
-        box.set(cx - trackR, cy - trackR, cx + trackR, cy + trackR);
-        arc.setColor(withAlpha(0xFFFFFFFF, alpha / 6));
-        canvas.drawArc(box, 90, 180, false, arc);
 
-        // Filled portion.
+        // Ticks. Minors all the way round, majors every eighth with a figure.
+        for (int i = 0; i <= TICKS; i++) {
+            float f = i / (float) TICKS;
+            boolean major = i % TICK_MAJOR_EVERY == 0;
+            double a = Math.toRadians(START_ANGLE + SWEEP * f);
+            float ca = (float) Math.cos(a), sa = (float) Math.sin(a);
+
+            float inner = trackR - (major ? 13 * d : 7 * d);
+            boolean lit = f <= t;
+            tick.setColor(withAlpha(lit ? colorForLoad() : 0xFFFFFFFF,
+                    lit ? alpha : alpha / (major ? 3 : 6)));
+            tick.setStrokeWidth((major ? 2.4f : 1.3f) * d);
+            canvas.drawLine(cx + trackR * ca, cy + trackR * sa,
+                    cx + inner * ca, cy + inner * sa, tick);
+
+            if (major) {
+                float lr = inner - 11 * d;
+                String label = gbTick(bytesOf(f));
+                tiny.setAlpha(alpha * 3 / 4);
+                float tw = tiny.measureText(label);
+                canvas.drawText(label, cx + lr * ca - tw / 2f,
+                        cy + lr * sa + 3.5f * d, tiny);
+            }
+        }
+
+        // The swept band, riding just outside the ticks.
+        box.set(cx - trackR - 5 * d, cy - trackR - 5 * d,
+                cx + trackR + 5 * d, cy + trackR + 5 * d);
+        arc.setColor(withAlpha(0xFFFFFFFF, alpha / 7));
+        canvas.drawArc(box, START_ANGLE, SWEEP, false, arc);
         arc.setColor(withAlpha(colorForLoad(), alpha));
-        canvas.drawArc(box, 90, 180 * t, false, arc);
+        canvas.drawArc(box, START_ANGLE, SWEEP * t, false, arc);
 
-        // Knob.
-        double ang = Math.toRadians(90 + 180 * t);
-        float kx = cx + (float) (trackR * Math.cos(ang));
-        float ky = cy + (float) (trackR * Math.sin(ang));
-        knob.setColor(withAlpha(0xFFFFFFFF, alpha));
-        canvas.drawCircle(kx, ky, 8.5f * d, knob);
+        // Needle and hub.
+        double ang = Math.toRadians(START_ANGLE + SWEEP * t);
+        float ca = (float) Math.cos(ang), sa = (float) Math.sin(ang);
+        float tipR = trackR - 20 * d;
+        needle.setColor(withAlpha(colorForLoad(), alpha));
+        needle.setStrokeWidth(3.2f * d);
+        canvas.drawLine(cx + 9 * d * ca, cy + 9 * d * sa,
+                cx + tipR * ca, cy + tipR * sa, needle);
+        knob.setColor(withAlpha(0xFF14141A, alpha));
+        canvas.drawCircle(cx, cy, 13 * d, knob);
         knob.setColor(withAlpha(colorForLoad(), alpha));
-        canvas.drawCircle(kx, ky, 4.5f * d, knob);
+        canvas.drawCircle(cx, cy, 6.5f * d, knob);
 
-        // Readout. Right-aligned into the disc, clear of the curve.
-        float textR = cx - 22 * d;
+        // Readout, inside the fan and clear of the labelled ticks.
+        float textR = cx - 46 * d;
         long chosen = bytesOf(t);
 
-        big.setAlpha(alpha);
-        String head = (chosen / (1024 * 1024)) + " MB";
-        canvas.drawText(head, textR - big.measureText(head), cy - 6 * d, big);
-
         small.setAlpha(alpha);
-        String l1 = "budget";
-        canvas.drawText(l1, textR - small.measureText(l1), cy - 30 * d, small);
+        String l1 = "memory budget";
+        canvas.drawText(l1, textR - small.measureText(l1), cy - 34 * d, small);
+
+        big.setAlpha(alpha);
+        String head = readout(chosen);
+        canvas.drawText(head, textR - big.measureText(head), cy - 4 * d, big);
 
         // Refresh the measured figure about twice a second; PSS is not free.
         long now = android.os.SystemClock.uptimeMillis();
-        if (now - lastRefresh > 500) { lastRefresh = now; }
-        long actual = budget.actualUsageBytes();
+        if (now - lastRefresh > 500) {
+            lastRefresh = now;
+            lastActual = budget.actualUsageBytes();
+        }
 
         tiny.setAlpha(alpha);
-        String l2 = "actual " + MemoryBudget.mb(actual);
-        canvas.drawText(l2, textR - tiny.measureText(l2), cy + 16 * d, tiny);
+        String l2 = "actual " + MemoryBudget.mb(lastActual);
+        canvas.drawText(l2, textR - tiny.measureText(l2), cy + 17 * d, tiny);
 
-        String l3 = MemoryBudget.gb(budget.totalDeviceBytes()) + " device"
-                + " · " + MemoryBudget.gb(MemoryBudget.OS_RESERVE_BYTES) + " reserved";
-        canvas.drawText(l3, textR - tiny.measureText(l3), cy + 32 * d, tiny);
+        String l3 = MemoryBudget.gb(budget.totalDeviceBytes()) + " device · "
+                + MemoryBudget.gb(MemoryBudget.OS_RESERVE_BYTES) + " reserved for Android";
+        canvas.drawText(l3, textR - tiny.measureText(l3), cy + 33 * d, tiny);
+
+        String l4 = "range " + MemoryBudget.mb(budget.minBudgetBytes())
+                + " – " + MemoryBudget.gb(budget.maxBudgetBytes());
+        canvas.drawText(l4, textR - tiny.measureText(l4), cy + 49 * d, tiny);
 
         if (budget.isShed()) {
             tiny.setColor(0xFFFF9F0A);
-            String l4 = "shed — system low on memory";
-            canvas.drawText(l4, textR - tiny.measureText(l4), cy + 48 * d, tiny);
+            String l5 = "shed — system low on memory";
+            canvas.drawText(l5, textR - tiny.measureText(l5), cy + 65 * d, tiny);
             tiny.setColor(0x8AFFFFFF);
         }
 

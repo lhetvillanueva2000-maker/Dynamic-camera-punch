@@ -4,7 +4,7 @@
 
 # Dynamic Camera Punch
 
-### v2.0.1 — the theme
+### v2.1.0 — the theme
 
 **A Dynamic Island for your Android punch-hole — running over every app on the phone.**
 
@@ -20,13 +20,16 @@ into a live pill showing what is actually playing, ringing and charging.
 ## What it does
 
 Switch the theme on and the island sits above every app on the device — home
-screen, launcher, games, anything. It grows out of your camera cutout when
-something happens and shrinks back into it when the moment passes.
+screen, launcher, games, anything. At rest it is a circle around your camera
+hole, indistinguishable from the cutout itself. Something happens, it grows out
+of the hole to show you; the moment passes, it shrinks back into the circle and
+is gone.
 
 The content is real:
 
 | Source | What the island shows | Needs |
 |---|---|---|
+| **Messages** | The conversation and **what was actually said** — "Family GC" over "Mum · Did you get the toolbox?" — with the sender's avatar. Tap to open the thread. | Notification access |
 | **Media sessions** | The track that is actually playing, with working play/pause and skip | Notification access |
 | **Calls** | The incoming caller, from the dialer's own notification | Notification access |
 | **Timers & alarms** | Live countdown from the clock app | Notification access |
@@ -43,7 +46,7 @@ Grant nothing at all beyond the overlay permission and the last four still work.
 
 | Variant A | Variant B |
 |---|---|
-| Pill fused to the top bezel — square shoulders, rounded chin, grows down out of the edge | Free-floating lens, clear of the bezels, fully rounded in every state |
+| Fused to the top bezel — flat shoulders against the edge, rounded chin, grows down out of the edge | Free-floating lens, clear of the bezels, fully rounded in every state |
 
 Pick whichever matches your phone. **The camera never moves**: the overlay window
 is centre-anchored and the lens is drawn at a fixed offset inside the island, so
@@ -53,7 +56,7 @@ no state change can slide the hole off the physical sensor.
 
 | Gesture | Result |
 |---|---|
-| **Tap** | Play/pause, or open the app that posted it |
+| **Tap** | Opens the app that posted it — a message opens that conversation, chat head and all. On music, play/pause. |
 | **Touch & hold** | Expand into the detail view, with the screen dimmed behind |
 | **Tap outside** | Collapse |
 | **Swipe ← / →** | Swap the two concurrent activities |
@@ -62,9 +65,14 @@ no state change can slide the hole off the physical sensor.
 ## The RAM dial
 
 Pull the tab on the **right edge** of the screen while the theme is running. It
-opens into a half-disc; drag along the arc to set the budget. Default **728 MB**,
-and the maximum is whatever the device has minus a **1.5 GB reserve for Android**
-that the dial can never eat into.
+opens into a half-disc speedometer — graduated ticks, a labelled scale and a
+needle — and you drag along the arc to set the budget.
+
+The range is **762 MB minimum**, which is what the theme wants to run smoothly,
+up to **the device's RAM minus a 1.5 GB reserve for Android** that the dial can
+never eat into. On an 8 GB phone that is 762 MB – 6.5 GB. On a device too small
+to give up 762 MB after the reserve, the ceiling becomes the floor and the dial
+tells you the real number rather than pretending.
 
 **Read this before you turn it up.** The island genuinely needs about 40 MB.
 Everything above that is held as *ballast* — real, resident memory allocated off-heap
@@ -85,7 +93,9 @@ happening. If you want the island and nothing else, set it to the minimum.
 ## The live demonstration
 
 The original sandbox is still in the app — every alert and activity, both cutout
-shapes, driven by hand. It is a WebView worth roughly 80 MB, so:
+shapes, driven by hand. **The home screen works too:** tap any icon and it opens,
+growing out of the icon into a full app and shrinking back into it when you tap
+the home bar. It is a WebView worth roughly 80 MB, so:
 
 **It will not open while the theme is running,** and starting the theme closes it.
 It lives in its own `:demo` process, so shutting it down returns every byte to the
@@ -94,7 +104,7 @@ system instead of leaving a fattened heap inside the process that hosts the over
 ## Install
 
 ```bash
-adb install -r dist/dcp-v2.0.1-release.apk
+adb install -r dist/dcp-v2.1.0-release.apk
 ```
 
 Every launchable file names its own version, so there is never any doubt about
@@ -102,9 +112,9 @@ which build is in front of you:
 
 | File | What it is | Size |
 |---|---|---|
-| `dcp-v2.0.1-release.apk` | The theme. **Install this.** | 121,696 bytes |
-| `dcp-v2.0.1-debug.apk` | Same app built unoptimised, signed with the Android debug key and installed as `com.dcp.punch.debug` under the name **DCP (debug)**. Only useful if you are attaching a debugger; it sits alongside the release build rather than replacing it. | 160,494 bytes |
-| `web/dynamic-camera-punch-v2.0.1.html` | The demonstration, openable in any browser. | — |
+| `dcp-v2.1.0-release.apk` | The theme. **Install this.** | 126,384 bytes |
+| `dcp-v2.1.0-debug.apk` | Same app built unoptimised, signed with the Android debug key and installed as `com.dcp.punch.debug` under the name **DCP (debug)**. Only useful if you are attaching a debugger; it sits alongside the release build rather than replacing it. | 167,110 bytes |
+| `web/dynamic-camera-punch-v2.1.0.html` | The demonstration, openable in any browser. | — |
 
 ### Check the download before you install it
 
@@ -114,15 +124,15 @@ corrupt. The size column above is the quickest tell — a few KB means you got a
 web page. To be certain:
 
 ```
-sha256  release  9ded28fb62f853a3601619fc237fc2218d8886ac1263011bcfef9107b5325622
-sha256  debug    2c4d98760ab7b10362b6421524a0d32bc2614546d3503ee79f4c77eba0365244
+sha256  release  5ec0559efa4e3c21edcb49e91050092f392cc149eed9276e90ae7fabdd8d6c55
+sha256  debug    84dfc30e51a50fcbef65203a5ddb6b6998a394951785e39948b0732c693b88a5
 ```
 
 Both are signed with APK Signature Scheme v2 and verify with `apksigner verify`
 across the whole supported range, API 24 to 34.
 
 The version also appears in the app's own header, and in Android's app info as
-version 2.0.1 (code 3). See [CHANGELOG.md](CHANGELOG.md) for what changed.
+version 2.1.0 (code 4). See [CHANGELOG.md](CHANGELOG.md) for what changed.
 
 Then open the app and work down the setup list:
 
@@ -134,7 +144,7 @@ Then open the app and work down the setup list:
 3. **Show notifications** — Android requires an ongoing notification for a service
    that runs indefinitely. That notice is also how you turn the theme off.
 
-Minimum Android 7.0 (API 24). ~120 KB. No network access.
+Minimum Android 7.0 (API 24). ~126 KB. No network access.
 
 ## Permissions, and why each one is there
 

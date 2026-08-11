@@ -44,10 +44,31 @@ DI.Phone = (function () {
   var BARS = [46, 62, 88, 74, 55, 40, 68];
 
   function tile(a) {
-    return '<div class="app"><span class="app__icon" style="background:' + a.bg +
+    return '<div class="app" data-app="' + a.name + '" data-icon="' + a.icon + '" ' +
+      'role="button" tabindex="0" aria-label="Open ' + a.name + '">' +
+      '<span class="app__icon" style="background:' + a.bg +
       (a.ink ? ';color:#1c1c1e' : '') + '">' + Icons[a.icon] + '</span>' +
       '<span class="app__name">' + a.name + '</span></div>';
   }
+
+  /* The app a tile opens into. One per frame, reused: the launch animation is a
+     FLIP from the tapped icon's rect to the full screen, so the window only ever
+     needs to exist once and be re-dressed for whichever app was tapped. */
+  var APP_WINDOW_HTML =
+    '<div class="app-window" data-app-window aria-hidden="true">' +
+      '<div class="app-window__chrome">' +
+        '<span class="app-window__icon" data-app-window-icon></span>' +
+        '<span class="app-window__title" data-app-window-title></span>' +
+      '</div>' +
+      '<div class="app-window__body">' +
+        '<div class="app-window__hero" data-app-window-hero></div>' +
+        '<div class="app-window__rows">' +
+          '<i style="width:82%"></i><i style="width:64%"></i><i style="width:91%"></i>' +
+          '<i style="width:47%"></i><i style="width:75%"></i><i style="width:58%"></i>' +
+        '</div>' +
+      '</div>' +
+      '<div class="app-window__hint">swipe up or tap the bar to close</div>' +
+    '</div>';
 
   /* The island's own markup: a gooey blob layer and a matching surface layer.
      See css/island.css for why it is drawn twice. */
@@ -111,12 +132,128 @@ DI.Phone = (function () {
           '</div>' +
 
           '<div class="dock">' + DOCK.map(tile).join('') + '</div>' +
+          APP_WINDOW_HTML +
           '<div class="scrim" data-scrim aria-hidden="true"></div>' +
           ISLAND_HTML +
-          '<div class="homebar" aria-hidden="true"></div>' +
+          '<div class="homebar" data-homebar></div>' +
         '</div>' +
       '</div>' +
     '</figure>';
+  }
+
+  /* ── Launching an app ─────────────────────────────────────────────── */
+
+  var ALL_APPS = APPS.concat(DOCK);
+
+  function appByName(name) {
+    for (var i = 0; i < ALL_APPS.length; i++) {
+      if (ALL_APPS[i].name === name) return ALL_APPS[i];
+    }
+    return null;
+  }
+
+  /**
+   * Wire the home screen so tapping an icon opens it.
+   *
+   * The launch is a FLIP: measure the tapped icon, start the window at exactly
+   * that rect, then animate to the full screen on the same curve the island
+   * uses. Because both rects are measured rather than assumed, the icon and the
+   * window corner stay welded together for the whole transition however the
+   * frame is scaled on the page.
+   */
+  function wireApps(figure) {
+    var screen = figure.querySelector('.phone__screen');
+    var win = figure.querySelector('[data-app-window]');
+    var homebar = figure.querySelector('[data-homebar]');
+    if (!screen || !win) return;
+
+    var iconEl = win.querySelector('[data-app-window-icon]');
+    var titleEl = win.querySelector('[data-app-window-title]');
+    var heroEl = win.querySelector('[data-app-window-hero]');
+    var openName = null;
+
+    /** An element's box in the screen's own coordinates, plus the screen's size. */
+    function rectIn(el) {
+      var a = el.getBoundingClientRect(), b = screen.getBoundingClientRect();
+      return { x: a.left - b.left, y: a.top - b.top,
+               w: a.width, h: a.height, sw: b.width, sh: b.height };
+    }
+
+    function open(tileEl) {
+      var def = appByName(tileEl.getAttribute('data-app'));
+      if (!def || openName) return;
+      openName = def.name;
+
+      titleEl.textContent = def.name;
+      iconEl.style.background = def.bg;
+      iconEl.style.color = def.ink ? '#1c1c1e' : '#fff';
+      iconEl.innerHTML = Icons[def.icon] || '';
+      heroEl.style.background = def.bg;
+
+      var r = rectIn(tileEl.querySelector('.app__icon'));
+      // Start welded to the icon…
+      win.style.transition = 'none';
+      win.style.transformOrigin = '0 0';
+      win.style.transform = 'translate(' + r.x + 'px,' + r.y + 'px) scale(' +
+        (r.w / r.sw) + ',' + (r.h / r.sh) + ')';
+      win.style.opacity = '0';
+      win.style.borderRadius = '90px';
+      win.classList.add('is-open');
+      win.setAttribute('aria-hidden', 'false');
+
+      // …then let the browser flush that before starting the transition, or the
+      // two style writes coalesce into one frame and nothing animates.
+      void win.offsetWidth;
+      win.style.transition = '';
+      win.style.transform = 'translate(0,0) scale(1,1)';
+      win.style.opacity = '1';
+      win.style.borderRadius = '';
+      figure.classList.add('has-app-open');
+    }
+
+    function close() {
+      if (!openName) return;
+      var tileEl = figure.querySelector('.app[data-app="' + cssEscape(openName) + '"] .app__icon');
+      openName = null;
+      figure.classList.remove('has-app-open');
+
+      if (tileEl) {
+        var r = rectIn(tileEl);
+        win.style.transform = 'translate(' + r.x + 'px,' + r.y + 'px) scale(' +
+          (r.w / r.sw) + ',' + (r.h / r.sh) + ')';
+        win.style.borderRadius = '90px';
+      }
+      win.style.opacity = '0';
+      win.setAttribute('aria-hidden', 'true');
+      // Hold .is-open until the shrink has finished — it is what keeps the
+      // window visible — then drop it. Slightly longer than the .52s transition
+      // so the last frame is never cut off.
+      setTimeout(function () {
+        if (!openName) win.classList.remove('is-open');
+      }, 560);
+    }
+
+    /* Attribute selectors need quoting for names with spaces or quotes. Every
+       app here is a plain word, but building a selector from data is exactly
+       where that stops being true one edit later. */
+    function cssEscape(s) { return String(s).replace(/["\\]/g, '\\$&'); }
+
+    figure.addEventListener('click', function (e) {
+      var t = e.target.closest('.app[data-app]');
+      if (t && !openName) { open(t); return; }
+      if (openName && (e.target.closest('[data-homebar]') || e.target.closest('.app-window'))) {
+        close();
+      }
+    });
+
+    figure.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && openName) { close(); return; }
+      var t = e.target.closest('.app[data-app]');
+      if (t && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); open(t); }
+    });
+
+    if (homebar) homebar.setAttribute('title', 'Close the open app');
+    return { open: open, close: close, isOpen: function () { return !!openName; } };
   }
 
   /** Build a frame and append it to `parent`. Returns the <figure>. */
@@ -125,8 +262,11 @@ DI.Phone = (function () {
     wrap.innerHTML = html(variant, opts);
     var el = wrap.firstElementChild;
     if (parent) parent.appendChild(el);
+    // Must be attached before wiring: the FLIP measures real rects.
+    wireApps(el);
     return el;
   }
 
-  return { html: html, create: create, copy: VARIANT_COPY, apps: APPS, dock: DOCK };
+  return { html: html, create: create, wireApps: wireApps,
+           copy: VARIANT_COPY, apps: APPS, dock: DOCK };
 })();

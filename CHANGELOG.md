@@ -1,5 +1,57 @@
 # Changelog
 
+## v2.1.0 — it says what the message says
+
+**Messages now show the message.** The pill used to read a chat notification's
+`EXTRA_TEXT`, which for every mainstream messaging app is a summary, a sender
+name, or nothing at all — so a message arrived and the island had nothing to
+say. It now reads `EXTRA_MESSAGES`, the structured record of the conversation
+itself, and shows the newest line:
+
+```
+Family GC
+Mum · Did you get the toolbox?
+```
+
+A group chat puts the conversation on the headline and `sender · message`
+underneath; a direct message puts the sender on top and what they said below.
+Either way the compact pill carries **the message**, not the name — the name is
+already the avatar next to it, pulled from the notification's large icon.
+`BigTextStyle` and `InboxStyle` are read properly too, so a long mail or a
+stacked notification gives up its real content instead of a teaser.
+
+Long messages are cut at a sentence boundary rather than a character count, but
+only once there is a sentence's worth of text in front of the break — cutting at
+the first one unconditionally turned *"Hey! Are you home yet?"* into *"Hey!"*.
+
+**Tapping the island opens the app again.** A notification's actions were being
+wired to a plain tap, so tapping a message fired whatever the app listed first —
+for most chat apps, "Mark as read". Tap now sends the notification's own content
+intent, which opens the conversation, chat head and all. The actions are still
+there, one tap deeper, in the expanded view.
+
+**Idle is a circle.** With nothing to show, the island collapses onto the camera
+hole and reads as part of the hardware, in both variants and in both the app and
+the demo. Variant A used to rest as an 86 px bar across the top.
+
+**The RAM dial is a speedometer.** Graduated ticks, a labelled scale and a needle
+on the half-disc. The range is now **762 MB minimum** — the figure the theme
+wants to run smoothly — up to device RAM minus the 1.5 GB Android reserve: on an
+8 GB phone, 762 MB to 6.5 GB. A device that cannot spare 762 MB after the reserve
+gets its real ceiling reported rather than a nominal minimum it would be killed
+for honouring.
+
+**The demonstration's home screen works.** Tap any app icon and it opens, growing
+out of the icon into a full app on the island's own morph curve, and shrinking
+back into it when you tap the home bar. The status bar, home bar and island all
+stay above it, as they do on a real phone.
+
+Verified: 19 browser assertions over the demo (launch, close, re-open, z-order,
+the idle circle in both variants, the lens still 0.00 px off centre, no console
+errors), the message-trimming logic exercised directly against the compiled
+class, both APKs signature-verified across API 24–34, Android Lint zero errors.
+Still not launched on a physical device.
+
 ## v2.0.1 — installable again
 
 **Fixes an "App not installed" failure that made the two v2.0.0 APKs mutually

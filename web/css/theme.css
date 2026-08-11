@@ -33,10 +33,15 @@
   --island-ring:          rgba(255, 255, 255, .07);
   --island-shadow:        0 12px 34px rgba(0, 0, 0, .55);
 
-  /* Idle cutout geometry, per variant */
-  --cut-a-w:  86px;   /* variant A: pill welded to the bezel  */
-  --cut-a-h:  27px;
-  --cut-b-w:  30px;   /* variant B: free-floating lens         */
+  /* Idle cutout geometry, per variant. With nothing to show, the island
+     collapses onto the camera hole and reads as part of the hardware — so both
+     variants rest as a circle around the lens, A with flat shoulders against the
+     bezel (its chin radius is half its width) and B fully round. These two
+     numbers are mirrored by IDLE_A_*/IDLE_B_* in IslandView.java; the app and
+     the demo are the same island and must not drift. */
+  --cut-a-w:  32px;   /* variant A: welded to the bezel, flat top */
+  --cut-b-w:  30px;   /* variant B: free-floating lens            */
+  --cut-a-h:  26px;
   --cut-b-h:  30px;
 
   /* Presentation geometry */

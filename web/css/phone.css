@@ -205,3 +205,91 @@
   background: rgba(255, 255, 255, .9);
   transform: translateX(-50%);
 }
+
+/* ── The app a home-screen icon opens into ──────────────────────────── */
+/* Above the home screen and dock (z-index 1), below the status bar (4), the
+   home bar (5) and the island (30). An open app must not swallow the clock and
+   battery — a real phone keeps them on top — and the island has to keep working
+   over it exactly as it does over anything else. */
+.app-window {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 47px;
+  background: linear-gradient(180deg, #16161c 0%, #0a0a0e 100%);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  will-change: transform, opacity;
+  /* Same morph curve as the island, so a launch and a pill feel related.
+     Visibility is toggled by .is-open alone rather than transitioned: the class
+     is held for the whole shrink and dropped once it has finished, so adding a
+     delay here as well would stack on top of that and leave the window sitting
+     visible for a second after it had visually gone. */
+  transition:
+    transform     .52s var(--ease-island),
+    border-radius .52s var(--ease-island),
+    opacity       .30s ease;
+}
+.app-window.is-open {
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* The home screen recedes behind the opening app, the way iOS does it. */
+.screen-content,
+.dock { transition: transform .52s var(--ease-island), opacity .52s var(--ease-island); }
+.phone.has-app-open .screen-content,
+.phone.has-app-open .dock { transform: scale(.94); opacity: .35; }
+
+.app-window__chrome {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 62px 26px 14px;
+}
+.app-window__icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 0 .5px rgba(255, 255, 255, .14) inset;
+}
+.app-window__icon svg { width: 17px; height: 17px; }
+.app-window__title { font-size: 17px; font-weight: 650; color: #fff; letter-spacing: -.01em; }
+
+.app-window__body { flex: 1 1 auto; padding: 6px 26px; overflow: hidden; }
+.app-window__hero {
+  height: 128px;
+  border-radius: 18px;
+  opacity: .9;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, .45);
+}
+.app-window__rows { display: flex; flex-direction: column; gap: 13px; margin-top: 22px; }
+.app-window__rows i {
+  height: 11px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, .13);
+}
+
+.app-window__hint {
+  flex: 0 0 auto;
+  padding: 0 26px 34px;
+  text-align: center;
+  font-size: 11px;
+  color: rgba(255, 255, 255, .42);
+}
+
+.homebar { cursor: pointer; }
+.app[data-app] { cursor: pointer; }
+
+@media (prefers-reduced-motion: reduce) {
+  .app-window,
+  .screen-content,
+  .dock { transition-duration: .01ms; }
+}

@@ -46,14 +46,25 @@ public final class MemoryBudget {
 
     private static final String TAG = "dcp.mem";
 
-    /** Bytes of headroom left for the OS and everything else. */
-    public static final long OS_RESERVE_BYTES = 1_500L * 1024 * 1024;   // 1.5 GB
+    /**
+     * Headroom left for Android and every other app, carved off the top before
+     * the dial sees a single byte. On an 8 GB phone the dial's ceiling is 6.5 GB.
+     */
+    public static final long OS_RESERVE_BYTES = 1_536L * 1024 * 1024;   // 1.5 GiB
 
-    /** The default the product ships with, as specified. */
-    public static final long DEFAULT_BUDGET_BYTES = 728L * 1024 * 1024;
+    /** The specified minimum for the theme to run smoothly, and the default. */
+    public static final long MIN_BUDGET_BYTES = 762L * 1024 * 1024;
 
-    /** Never let the dial go below what the island genuinely needs. */
-    public static final long MIN_BUDGET_BYTES = 64L * 1024 * 1024;
+    public static final long DEFAULT_BUDGET_BYTES = MIN_BUDGET_BYTES;
+
+    /**
+     * Absolute floor, used only where the device cannot afford the 762 MB
+     * minimum once the OS reserve is taken out — a 2 GB phone has 500 MB left,
+     * and honouring the nominal minimum there would mean allocating a third of
+     * the machine and getting killed for it. The dial reports the real ceiling
+     * instead of pretending.
+     */
+    public static final long FLOOR_BYTES = 64L * 1024 * 1024;
 
     private static final int CHUNK_BYTES = 16 * 1024 * 1024;   // 16 MiB per buffer
     private static final int PAGE = 4096;
@@ -82,15 +93,24 @@ public final class MemoryBudget {
     }
 
     /**
-     * The most the dial may ask for: everything except the slice reserved for
-     * the OS. On a 2 GB phone that leaves 500 MB; on a 12 GB phone, 10.5 GB.
+     * The most the dial may ask for: the device, less the OS reserve. 8 GB gives
+     * 6.5 GB; 12 GB gives 10.5 GB. The reserve is taken off the top and the dial
+     * can never reach into it.
      */
     public long maxBudgetBytes() {
-        return Math.max(MIN_BUDGET_BYTES, totalDeviceBytes() - OS_RESERVE_BYTES);
+        return Math.max(FLOOR_BYTES, totalDeviceBytes() - OS_RESERVE_BYTES);
+    }
+
+    /**
+     * The bottom of the dial's range: 762 MB, except on a device too small to
+     * give that up after the reserve, where the ceiling becomes the floor too.
+     */
+    public long minBudgetBytes() {
+        return Math.min(MIN_BUDGET_BYTES, maxBudgetBytes());
     }
 
     public long clamp(long bytes) {
-        return Math.max(MIN_BUDGET_BYTES, Math.min(bytes, maxBudgetBytes()));
+        return Math.max(minBudgetBytes(), Math.min(bytes, maxBudgetBytes()));
     }
 
     public long getBudgetBytes() { return budgetBytes; }

@@ -63,7 +63,11 @@ public class IslandView extends View {
     }
 
     /* ── Design constants, in dp ─────────────────────────────────────── */
-    private static final float IDLE_A_W = 86, IDLE_A_H = 27, LENS_TOP_A = 7.5f;
+    // Idle is a circle hugging the lens, not a bar: with nothing to show, the
+    // island collapses back onto the camera cutout and reads as part of the
+    // hardware. Variant A keeps its flat shoulders against the bezel, so its
+    // chin radius is half its width and it still resolves as a circle.
+    private static final float IDLE_A_W = 32, IDLE_A_H = 26, LENS_TOP_A = 7.5f;
     private static final float IDLE_B_W = 30, IDLE_B_H = 30, LENS_TOP_B = 9f;
     private static final float COMPACT_H = 37;
     private static final float LENS_SIZE = 12;

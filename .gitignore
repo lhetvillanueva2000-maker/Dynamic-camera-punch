@@ -236,3 +236,7 @@ android/captures/
 
 # Scratch files from the capture tools
 tools/_*.html
+
+# Playwright, installed only to run tools/test-demo.js and tools/capture.js.
+# The demo itself has no dependencies.
+node_modules/
