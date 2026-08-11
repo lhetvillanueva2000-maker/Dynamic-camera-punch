@@ -6,15 +6,18 @@ Two things ship here: the **APK** and everything that produces it.
 
 | File | Size | Notes |
 |---|---|---|
-| `dist/dcp-release.apk` | ~83 KB | Minified, resource-shrunk, signed. Install this one. |
-| `dist/dcp-debug.apk` | ~100 KB | Debug-signed, `applicationId` suffixed `.debug` so it installs alongside the release build. |
+| `dist/dcp-release.apk` | ~120 KB | Minified, resource-shrunk, signed. Install this one. |
+| `dist/dcp-debug.apk` | ~160 KB | Debug-signed, `applicationId` suffixed `.debug` so it installs alongside the release build. |
 
 ```bash
 adb install -r dist/dcp-release.apk
 ```
 
-Package `com.dcp.punch` · minSdk 24 (Android 7.0) · targetSdk 34 · no permissions,
-no network access, nothing but a `WebView` over bundled assets.
+Package `com.dcp.punch` · minSdk 24 (Android 7.0) · targetSdk 34 · no network access.
+
+This is a **system overlay theme**: it draws the island over every other app once
+you grant "Display over other apps". See the README for the full permission list
+and the reasoning behind each one.
 
 ## What the APK is made of
 
@@ -23,14 +26,15 @@ produced from a source file in this package:
 
 | Inside the APK | Comes from |
 |---|---|
-| `assets/web/**` — the whole demo: `index.html`, 4 CSS files, 6 JS files, `logo.svg` | `web/` — copied in verbatim by the `syncWebAssets` Gradle task |
-| `classes.dex` | `android/app/src/main/java/com/dcp/punch/MainActivity.java` |
+| `assets/web/**` — the live demonstration: `index.html`, 4 CSS files, 6 JS files, `logo.svg` | `web/` — copied in verbatim by the `syncWebAssets` Gradle task |
+| `classes.dex` — the overlay service, the Canvas-drawn island, the RAM dial, the notification/media readers | `android/app/src/main/java/com/dcp/punch/**` (13 classes across `data/`, `overlay/`, `mem/`, `ui/`) |
 | `AndroidManifest.xml` (binary) | `android/app/src/main/AndroidManifest.xml` |
 | `resources.arsc` + `res/**` — launcher icons, themes, colours, strings | `android/app/src/main/res/**` |
 | `META-INF/*` — v2 signature block | `android/keystore/dcp-demo.jks` via `android/keystore.properties` |
 
 The APK carries **no libraries at all** — no AndroidX, no Kotlin runtime, no
-third-party code. That is why 130 KB of web app compresses into an 83 KB app.
+third-party code. The island is framework `View` + `Canvas` drawing, which is why
+a system-wide overlay plus a full web demo fits in 120 KB.
 
 Verify any of this yourself:
 
@@ -42,12 +46,14 @@ apksigner verify --print-certs dist/dcp-release.apk
 ## The sources
 
 ```
-web/         The actual product. Open web/index.html in any browser — no build,
-             no server, no dependencies. This same folder is what the APK ships.
-android/     The WebView wrapper: Gradle build, one Activity, resources, icons.
+android/     The theme itself: overlay service, Canvas island, RAM dial,
+             notification + media readers, control panel.
+web/         The live demonstration. Also opens standalone in any browser —
+             no build, no server, no dependencies.
 tools/       Playwright/Pillow scripts that regenerate everything in docs/.
 docs/        Generated screenshots and the preview GIF.
-README.md    Full documentation: features, gestures, architecture, embedding API.
+README.md    Full documentation: what it shows, permissions, the RAM dial,
+             architecture, build instructions.
 ```
 
 ## Rebuilding
@@ -74,15 +80,22 @@ keytool -genkeypair -keystore my.jks -alias mykey -keyalg RSA -keysize 2048 -val
 
 ## Verified before packaging
 
-- Full `clean` release + debug build from scratch: **BUILD SUCCESSFUL**, all 12 web
-  asset files present in both APKs, v2 signature verifies.
-- All 14 alerts and 9 activities driven through compact **and** expanded states, in
-  both cutout variants and the side-by-side view: no console or page errors.
-- Gestures: tap, touch-and-hold to expand, tap-outside to collapse, swipe-to-swap.
-- Geometry invariant: the camera lens sits **0.00 px** from the screen's centre line
-  in every state of both variants — idle, compact, two-activity, expanded.
+- Full `clean` release + debug build from scratch: **BUILD SUCCESSFUL**.
+- **Android Lint: zero errors.** It caught two genuine crashers on the way —
+  a `registerReceiver` overload that does not exist below API 26, and a display-cutout
+  mode constant that does not exist below API 30 — plus per-frame object
+  allocations in both custom views, which matter a great deal for a view that
+  draws for as long as the theme is enabled.
+- APK contents verified: exactly six permissions (no speculative extras), all
+  components present, all 12 web asset files bundled, v2 signature verifies.
+- Web demo: all 14 alerts and 9 activities driven through compact **and** expanded
+  states in both cutout variants — no console or page errors.
+- Geometry invariant in the web build: the camera lens sits **0.00 px** from the
+  screen's centre line in every state of both variants. The overlay uses the same
+  centre-anchored model.
 
-The APK was **not** launched on a physical device or emulator (no KVM in the build
-environment), so this is a structural and content verification, not a runtime one.
-The UI itself was exercised in Chromium, which is the same engine Android WebView
-uses.
+**The APK was not launched on a device or emulator** — the build environment has no
+KVM, so no emulator can boot. Everything above is static and structural
+verification. The overlay's runtime behaviour — window flags, permission flows,
+service lifecycle on a real manufacturer skin — has not been exercised, and the
+first install is the real smoke test.

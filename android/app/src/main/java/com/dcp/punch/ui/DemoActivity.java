@@ -1,7 +1,10 @@
-package com.dcp.punch;
+package com.dcp.punch.ui;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.IntentFilter;
 import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
@@ -15,8 +18,17 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
+import com.dcp.punch.BuildConfig;
+import com.dcp.punch.overlay.IslandService;
+
 /**
- * Single-Activity WebView host for the Dynamic Camera Punch demo.
+ * The live demonstration: a WebView sandbox over the bundled web/ folder.
+ *
+ * Runs in its own :demo process, and shuts itself down the instant the theme
+ * takes over. A WebView costs roughly 80 MB; there is no reason to hold that
+ * while the real overlay is the thing on screen, and a separate process means
+ * closing it returns every byte to the system rather than leaving a fattened
+ * heap behind in the process that hosts the island.
  *
  * The whole product is the web app in assets/web — this class only has to do
  * three things well:
@@ -27,17 +39,48 @@ import android.webkit.WebViewClient;
  *   3. Keep navigation inside the bundled assets and hand anything else to the
  *      browser.
  */
-public class MainActivity extends Activity {
+public class DemoActivity extends Activity {
 
     private static final String START_URL = "file:///android_asset/web/index.html";
     private static final String ASSET_PREFIX = "file:///android_asset/";
 
     private WebView web;
 
-    @SuppressLint("SetJavaScriptEnabled")
+    /** The service broadcasts when the theme takes over; free the WebView. */
+    private final BroadcastReceiver closeReceiver = new BroadcastReceiver() {
+        @Override public void onReceive(Context context, Intent intent) { finish(); }
+    };
+
+    // UnspecifiedRegisterReceiverFlag: the detector wants a literal flag argument
+    // and cannot see through the SDK_INT branch below. The receiver is guarded by
+    // a signature-level permission on every API level *and* by
+    // RECEIVER_NOT_EXPORTED from 33 up, which is strictly stronger than what the
+    // check asks for.
+    @SuppressLint({"SetJavaScriptEnabled", "UnspecifiedRegisterReceiverFlag"})
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Belt and braces: the launcher disables the button, but an intent can
+        // arrive from anywhere, and two engines running at once is the exact
+        // waste this separation exists to avoid.
+        if (IslandService.isRunning(this)) {
+            finish();
+            return;
+        }
+        // Two guards, because they cover different things. The signature-level
+        // permission works on every API level and means only a build signed with
+        // our key can send this. RECEIVER_NOT_EXPORTED is the API 33+ way of
+        // saying the same thing to the platform, so pass it where it exists.
+        IntentFilter closeFilter = new IntentFilter(IslandService.ACTION_CLOSE_DEMO);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(closeReceiver, closeFilter,
+                    IslandService.PERMISSION_INTERNAL, null, Context.RECEIVER_NOT_EXPORTED);
+        } else {
+            registerReceiver(closeReceiver, closeFilter,
+                    IslandService.PERMISSION_INTERNAL, null);
+        }
+
         drawEdgeToEdge();
 
         web = new WebView(this);
@@ -147,6 +190,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        try { unregisterReceiver(closeReceiver); } catch (Exception ignored) { }
         if (web != null) {
             web.destroy();
             web = null;

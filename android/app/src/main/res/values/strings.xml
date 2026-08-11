@@ -1,4 +1,45 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Dynamic Camera Punch</string>
+    <string name="tagline">A Dynamic Island for your punch-hole, over every app.</string>
+
+    <string name="theme_title">Theme</string>
+    <string name="theme_on">Island is live over every app</string>
+    <string name="theme_off">Turn on to place the island over your home screen and apps</string>
+    <string name="turn_off">Turn off</string>
+
+    <string name="setup_title">Setup</string>
+    <string name="perm_overlay">Display over other apps</string>
+    <string name="perm_overlay_why">Required. This is what lets the island draw on top of everything else.</string>
+    <string name="perm_notifications">Notification access</string>
+    <string name="perm_notifications_why">Optional but recommended. Without it the island only reacts to charging, ringer and headphones.</string>
+    <string name="perm_post">Show notifications</string>
+    <string name="perm_post_why">Android requires an ongoing notification for a service that runs indefinitely.</string>
+    <string name="grant">Grant</string>
+    <string name="granted">Granted</string>
+
+    <string name="cutout_title">Cutout shape</string>
+    <string name="variant_a">Variant A</string>
+    <string name="variant_a_desc">Fused to the top bezel</string>
+    <string name="variant_b">Variant B</string>
+    <string name="variant_b_desc">Floating, clear of the bezels</string>
+
+    <string name="ram_title">Memory budget</string>
+    <string name="ram_hint">Pull the tab on the right edge of the screen to open the dial while the theme is running.</string>
+    <string name="ram_honest">The island genuinely needs about 40 MB. Anything above that is held as ballast so the figure on the dial is a real measurement rather than a decoration — it will not make the island faster, and a large footprint pushes other apps out of memory. The reserve below is never touched.</string>
+
+    <string name="demo_title">Live demonstration</string>
+    <string name="demo_open">Open demonstration</string>
+    <string name="demo_desc">The full sandbox: every alert and activity, both cutout shapes, driven by hand.</string>
+    <string name="demo_blocked">Unavailable while the theme is running. The demonstration is a separate WebView process worth roughly 80 MB, and running both at once wastes it.</string>
+
+    <string name="boot_title">Start on boot</string>
+    <string name="boot_desc">Bring the island back automatically after a restart.</string>
+
+    <string name="channel_theme">Theme running</string>
+    <string name="channel_theme_desc">Ongoing notice while the island overlay is active.</string>
+    <string name="notif_title">Dynamic Camera Punch</string>
+    <string name="notif_text">Island active · %1$s budget</string>
+    <string name="ram_detail_fmt">%1$s in this device · %2$s reserved for Android · up to %3$s available to the dial · using %4$s right now</string>
+    <string name="ram_placeholder" translatable="false">728 MB</string>
 </resources>
