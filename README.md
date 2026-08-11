@@ -4,6 +4,8 @@
 
 # Dynamic Camera Punch
 
+### v2.0.0 — the theme
+
 **A Dynamic Island for your Android punch-hole — running over every app on the phone.**
 
 Not a mock-up and not a wallpaper: a system overlay that turns your camera cutout
@@ -92,8 +94,20 @@ system instead of leaving a fattened heap inside the process that hosts the over
 ## Install
 
 ```bash
-adb install -r dist/dcp-release.apk
+adb install -r dist/dcp-v2.0.0-release.apk
 ```
+
+Every launchable file names its own version, so there is never any doubt about
+which build is in front of you:
+
+| File | What it is |
+|---|---|
+| `dcp-v2.0.0-release.apk` | The theme. Install this. |
+| `dcp-v2.0.0-debug.apk` | Debug build; installs alongside the release one. |
+| `web/dynamic-camera-punch-v2.0.0.html` | The demonstration, openable in any browser. |
+
+The version also appears in the app's own header, and in Android's app info as
+version 2.0.0 (code 2). See [CHANGELOG.md](CHANGELOG.md) for what changed.
 
 Then open the app and work down the setup list:
 

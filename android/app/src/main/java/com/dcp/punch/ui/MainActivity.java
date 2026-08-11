@@ -15,6 +15,7 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.dcp.punch.BuildConfig;
 import com.dcp.punch.DcpApp;
 import com.dcp.punch.R;
 import com.dcp.punch.data.DcpNotificationListener;
@@ -63,6 +64,11 @@ public class MainActivity extends Activity {
         ramDetail = findViewById(R.id.ram_detail);
         demoDesc = findViewById(R.id.demo_desc);
         demoButton = findViewById(R.id.demo_button);
+        // Show the version on screen as well as in Settings, so "which build am
+        // I running" never needs a filename to answer.
+        ((TextView) findViewById(R.id.tagline)).setText(
+                getString(R.string.tagline) + "  ·  v" + BuildConfig.VERSION_NAME);
+
         rowOverlay = findViewById(R.id.row_overlay);
         rowListener = findViewById(R.id.row_listener);
         rowPost = findViewById(R.id.row_post);

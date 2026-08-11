@@ -25,6 +25,7 @@ const FFMPEG = process.env.FFMPEG ||
     ? '/opt/pw-browsers/ffmpeg-1011/ffmpeg-linux'
     : 'ffmpeg');
 
+const DEMO_PAGE = 'dynamic-camera-punch-v2.0.0.html';
 const FPS = 12;
 const GIF_WIDTH = 380;
 
@@ -47,7 +48,7 @@ async function gallery(browser, variant, expanded, out, height) {
 /** The demo page itself, in a given state. */
 async function demo(browser, query, out, viewport) {
   const page = await browser.newPage({ viewport, deviceScaleFactor: 2 });
-  await page.goto(url('web/index.html', query));
+  await page.goto(url('web/' + DEMO_PAGE, query));
   await page.waitForTimeout(2200);
   await page.screenshot({ path: path.join(DOCS, out) });
   await page.close();

@@ -1,7 +1,7 @@
 /* ============================================================================
    phone.js — builds a device frame for an island to live in.
 
-   The markup contract lives here rather than in a page, so index.html, the
+   The markup contract lives here rather than in a page, so the demo page, the
    screenshot gallery and anything else you embed the island in all construct
    the exact same DOM. DI.Island only ever queries the [data-*] hooks below.
    ========================================================================== */

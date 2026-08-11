@@ -6,11 +6,11 @@ Two things ship here: the **APK** and everything that produces it.
 
 | File | Size | Notes |
 |---|---|---|
-| `dist/dcp-release.apk` | ~120 KB | Minified, resource-shrunk, signed. Install this one. |
-| `dist/dcp-debug.apk` | ~160 KB | Debug-signed, `applicationId` suffixed `.debug` so it installs alongside the release build. |
+| `dist/dcp-v2.0.0-release.apk` | ~120 KB | Minified, resource-shrunk, signed. Install this one. |
+| `dist/dcp-v2.0.0-debug.apk` | ~160 KB | Debug-signed, `applicationId` suffixed `.debug` so it installs alongside the release build. |
 
 ```bash
-adb install -r dist/dcp-release.apk
+adb install -r dist/dcp-v2.0.0-release.apk
 ```
 
 Package `com.dcp.punch` · minSdk 24 (Android 7.0) · targetSdk 34 · no network access.
@@ -26,7 +26,7 @@ produced from a source file in this package:
 
 | Inside the APK | Comes from |
 |---|---|
-| `assets/web/**` — the live demonstration: `index.html`, 4 CSS files, 6 JS files, `logo.svg` | `web/` — copied in verbatim by the `syncWebAssets` Gradle task |
+| `assets/web/**` — the live demonstration: `dynamic-camera-punch-v2.0.0.html`, 4 CSS files, 6 JS files, `logo.svg` | `web/` — copied in verbatim by the `syncWebAssets` Gradle task |
 | `classes.dex` — the overlay service, the Canvas-drawn island, the RAM dial, the notification/media readers | `android/app/src/main/java/com/dcp/punch/**` (13 classes across `data/`, `overlay/`, `mem/`, `ui/`) |
 | `AndroidManifest.xml` (binary) | `android/app/src/main/AndroidManifest.xml` |
 | `resources.arsc` + `res/**` — launcher icons, themes, colours, strings | `android/app/src/main/res/**` |
@@ -39,8 +39,8 @@ a system-wide overlay plus a full web demo fits in 120 KB.
 Verify any of this yourself:
 
 ```bash
-unzip -l dist/dcp-release.apk
-apksigner verify --print-certs dist/dcp-release.apk
+unzip -l dist/dcp-v2.0.0-release.apk
+apksigner verify --print-certs dist/dcp-v2.0.0-release.apk
 ```
 
 ## The sources
