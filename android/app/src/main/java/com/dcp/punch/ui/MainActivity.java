@@ -11,6 +11,7 @@ import android.provider.Settings;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -19,6 +20,7 @@ import com.dcp.punch.BuildConfig;
 import com.dcp.punch.DcpApp;
 import com.dcp.punch.R;
 import com.dcp.punch.data.DcpNotificationListener;
+import com.dcp.punch.data.Sources;
 import com.dcp.punch.mem.MemoryBudget;
 import com.dcp.punch.mem.Prefs;
 import com.dcp.punch.overlay.IslandService;
@@ -43,6 +45,10 @@ public class MainActivity extends Activity {
 
     private MemoryBudget memory;
     private Prefs prefs;
+    private Sources sources;
+
+    private LinearLayout sourcesList, appsList;
+    private TextView appsDesc;
 
     /** Set while we programmatically flip the switch, so listeners stay quiet. */
     private boolean binding;
@@ -54,6 +60,7 @@ public class MainActivity extends Activity {
 
         prefs = Prefs.get(this);
         memory = DcpApp.get().memory();
+        sources = Sources.get(this);
 
         themeSwitch = findViewById(R.id.theme_switch);
         themeStatus = findViewById(R.id.theme_status);
@@ -66,6 +73,17 @@ public class MainActivity extends Activity {
         alwaysSwitch = findViewById(R.id.always_switch);
         alwaysDesc = findViewById(R.id.always_desc);
         autoSwitch = findViewById(R.id.auto_switch);
+        sourcesList = findViewById(R.id.sources_list);
+        appsList = findViewById(R.id.apps_list);
+        appsDesc = findViewById(R.id.apps_desc);
+
+        findViewById(R.id.apps_reset).setOnClickListener(v -> {
+            sources.forgetAll();
+            Toast.makeText(this, R.string.apps_empty, Toast.LENGTH_SHORT).show();
+            bind();
+        });
+
+        buildSourceRows();
         demoDesc = findViewById(R.id.demo_desc);
         demoButton = findViewById(R.id.demo_button);
         // Show the version on screen as well as in Settings, so "which build am
@@ -160,6 +178,9 @@ public class MainActivity extends Activity {
                 ? R.drawable.bg_pill_active : R.drawable.bg_pill);
         variantDesc.setText("a".equals(variant) ? R.string.variant_a_desc : R.string.variant_b_desc);
 
+        bindSourceRows();
+        buildAppRows();
+
         alwaysSwitch.setChecked(prefs.isAlwaysVisible());
         alwaysDesc.setText(prefs.isAlwaysVisible() ? R.string.always_on : R.string.always_off);
         autoSwitch.setChecked(memory.isAutoManage());
@@ -179,6 +200,123 @@ public class MainActivity extends Activity {
         demoDesc.setText(running ? R.string.demo_blocked : R.string.demo_desc);
 
         binding = false;
+    }
+
+    /* ── What the island shows ───────────────────────────────────────── */
+
+    /** One switch per Source, built once. Order here is the order on screen. */
+    private static final Sources.Source[] SOURCE_ORDER = {
+            Sources.Source.MESSAGES, Sources.Source.MEDIA, Sources.Source.CALLS,
+            Sources.Source.TIMERS, Sources.Source.NAVIGATION, Sources.Source.PROGRESS,
+            Sources.Source.OTHER, Sources.Source.CHARGING, Sources.Source.BATTERY,
+            Sources.Source.RINGER, Sources.Source.HEADPHONES
+    };
+
+    private int labelFor(Sources.Source s) {
+        switch (s) {
+            case MESSAGES:   return R.string.src_messages;
+            case MEDIA:      return R.string.src_media;
+            case CALLS:      return R.string.src_calls;
+            case TIMERS:     return R.string.src_timers;
+            case NAVIGATION: return R.string.src_navigation;
+            case PROGRESS:   return R.string.src_progress;
+            case CHARGING:   return R.string.src_charging;
+            case BATTERY:    return R.string.src_battery;
+            case RINGER:     return R.string.src_ringer;
+            case HEADPHONES: return R.string.src_headphones;
+            default:         return R.string.src_other;
+        }
+    }
+
+    private void buildSourceRows() {
+        sourcesList.removeAllViews();
+        for (Sources.Source s : SOURCE_ORDER) {
+            View row = toggleRow(getString(labelFor(s)), sources.isEnabled(s), on -> {
+                sources.setEnabled(s, on);
+                // A source switched off should not leave its last presentation
+                // sitting on the island until something else displaces it.
+                if (!on) DcpApp.get().store().clear();
+            });
+            row.setTag(s);
+            sourcesList.addView(row);
+        }
+    }
+
+    private void bindSourceRows() {
+        for (int i = 0; i < sourcesList.getChildCount(); i++) {
+            View row = sourcesList.getChildAt(i);
+            Object tag = row.getTag();
+            if (tag instanceof Sources.Source) {
+                Switch sw = row.findViewById(android.R.id.toggle);
+                sw.setChecked(sources.isEnabled((Sources.Source) tag));
+            }
+        }
+    }
+
+    /**
+     * One row per app the island has actually heard from.
+     *
+     * The list is learned from arriving notifications rather than enumerated, so
+     * this needs no QUERY_ALL_PACKAGES — and an app that has never sent anything
+     * is not a decision worth putting in front of anybody.
+     */
+    private void buildAppRows() {
+        appsList.removeAllViews();
+        java.util.Set<String> seen = sources.seen();
+        appsDesc.setText(seen.isEmpty() ? R.string.apps_empty : R.string.apps_desc);
+        findViewById(R.id.apps_reset).setVisibility(seen.isEmpty() ? View.GONE : View.VISIBLE);
+
+        for (String pkg : seen) {
+            final String p = pkg;
+            appsList.addView(toggleRow(appLabel(p), sources.isAppAllowed(p), on -> {
+                sources.setAppAllowed(p, on);
+                if (!on) DcpApp.get().store().clear();
+            }));
+        }
+    }
+
+    /**
+     * The app's display name when the platform will give it to us, and the
+     * package name when it will not. Since Android 11 package visibility can
+     * hide an app we have only ever seen through a notification, and a package
+     * name is a worse label but an honest one.
+     */
+    private String appLabel(String pkg) {
+        try {
+            PackageManager pm = getPackageManager();
+            CharSequence label = pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0));
+            if (label != null && label.length() > 0) return label.toString();
+        } catch (Exception ignored) { }
+        return pkg;
+    }
+
+    /** A label on the left, a switch on the right. */
+    private View toggleRow(String label, boolean checked, java.util.function.Consumer<Boolean> onChange) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(android.view.Gravity.CENTER_VERTICAL);
+        int pad = Math.round(6 * getResources().getDisplayMetrics().density);
+        row.setPadding(0, pad, 0, pad);
+
+        TextView tv = new TextView(this);
+        tv.setText(label);
+        tv.setTextColor(getColor(R.color.text));
+        tv.setTextSize(14.5f);
+        tv.setMaxLines(1);
+        tv.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        row.addView(tv, new LinearLayout.LayoutParams(0,
+                LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+
+        Switch sw = new Switch(this);
+        sw.setId(android.R.id.toggle);
+        sw.setChecked(checked);
+        sw.setMinWidth(0);
+        sw.setMinimumWidth(0);
+        sw.setOnCheckedChangeListener((b, v) -> { if (!binding) onChange.accept(v); });
+        row.addView(sw);
+
+        row.setOnClickListener(v -> sw.toggle());
+        return row;
     }
 
     private void wirePermissionRow(View row, int nameRes, int whyRes, View.OnClickListener onGrant) {

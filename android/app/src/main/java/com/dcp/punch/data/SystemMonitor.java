@@ -66,6 +66,7 @@ public class SystemMonitor extends BroadcastReceiver {
                 break;
             }
             case Intent.ACTION_POWER_CONNECTED: {
+                if (!allowed(Sources.Source.CHARGING)) break;
                 Presentation p = new Presentation("charging", Presentation.Kind.ALERT);
                 p.accent = 0xFF30D158;
                 p.icon = ctx.getDrawable(R.drawable.ic_bolt);
@@ -78,6 +79,7 @@ public class SystemMonitor extends BroadcastReceiver {
                 break;
             }
             case Intent.ACTION_BATTERY_LOW: {
+                if (!allowed(Sources.Source.BATTERY)) break;
                 Presentation p = new Presentation("batterylow", Presentation.Kind.ALERT);
                 p.accent = 0xFFFF453A;
                 p.icon = ctx.getDrawable(R.drawable.ic_bolt);
@@ -89,6 +91,7 @@ public class SystemMonitor extends BroadcastReceiver {
                 break;
             }
             case Intent.ACTION_HEADSET_PLUG: {
+                if (!allowed(Sources.Source.HEADPHONES)) break;
                 int plugged = intent.getIntExtra("state", -1);
                 if (plugged < 0) break;
                 Presentation p = new Presentation("headset", Presentation.Kind.ALERT);
@@ -103,7 +106,10 @@ public class SystemMonitor extends BroadcastReceiver {
             case AudioManager.RINGER_MODE_CHANGED_ACTION: {
                 int mode = intent.getIntExtra(AudioManager.EXTRA_RINGER_MODE, -1);
                 if (mode < 0 || mode == lastRinger) break;
+                // Track the mode even when muted, so re-enabling the source does
+                // not immediately fire on a change that happened while it was off.
                 lastRinger = mode;
+                if (!allowed(Sources.Source.RINGER)) break;
                 Presentation p = new Presentation("ringer", Presentation.Kind.ALERT);
                 boolean silent = mode == AudioManager.RINGER_MODE_SILENT;
                 boolean vibrate = mode == AudioManager.RINGER_MODE_VIBRATE;
@@ -119,6 +125,10 @@ public class SystemMonitor extends BroadcastReceiver {
             default:
                 break;
         }
+    }
+
+    private boolean allowed(Sources.Source s) {
+        return Sources.get(ctx).isEnabled(s);
     }
 
     private String batteryLine() {

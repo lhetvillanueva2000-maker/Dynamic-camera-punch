@@ -4,7 +4,7 @@
 
 # Dynamic Camera Punch
 
-### v2.2.0 — the theme
+### v2.3.0 — the theme
 
 **A Dynamic Island for your Android punch-hole — running over every app on the phone.**
 
@@ -97,6 +97,19 @@ compared. On a healthy install the needle sits far above a very short green band
 > and it evicts your actual apps so they cold-start instead of resuming. The
 > ballast is gone. Nothing replaced it.
 
+## Choosing what it shows
+
+The island is opt-out, not opt-in: everything is on to begin with, and the app's
+**What the island shows** card has a switch for each kind of content — messages,
+music, calls, timers, navigation, downloads, other notifications, and the four
+permission-free system events.
+
+Underneath it, **Apps** lists every app the island has actually heard from, each
+with its own switch. Turn one off and it will never reach the cutout again. The
+list is *learned from arriving notifications* rather than enumerated, which is why
+this needs no `QUERY_ALL_PACKAGES`: an app that has never sent anything is not a
+decision worth putting in front of you.
+
 ## Keeping the island on screen
 
 By default, **with nothing to show there is no overlay at all**. The island
@@ -107,9 +120,15 @@ If you would rather it stayed, the app has a **Keep the island on screen** switc
 On, it sits as a circle around your camera whatever is happening. Off is the
 default and the behaviour most people want.
 
-"App is running" notices are never shown. Every foreground service posts one —
-file sync, a VPN, a launcher, this app's own overlay — and none of them is an
-event worth announcing on your camera cutout.
+Two kinds of notification never appear, whatever the switches say:
+
+- **"App is running" notices.** Every foreground service posts one — file sync, a
+  VPN, a launcher, this app's own overlay — and none is an event worth announcing.
+- **Ongoing status notices.** A keyboard, a sync adapter, USB mode, storage. These
+  are permanent by nature, and until v2.3.0 any of them would take up residence on
+  the island and keep the overlay on screen forever. Only calls, navigation,
+  timers, alarms and downloads are allowed to persist; everything else passes
+  through and is gone.
 
 ## The live demonstration
 
@@ -125,7 +144,7 @@ system instead of leaving a fattened heap inside the process that hosts the over
 ## Install
 
 ```bash
-adb install -r dist/dcp-v2.2.0-release.apk
+adb install -r dist/dcp-v2.3.0-release.apk
 ```
 
 Every launchable file names its own version, so there is never any doubt about
@@ -133,9 +152,9 @@ which build is in front of you:
 
 | File | What it is | Size |
 |---|---|---|
-| `dcp-v2.2.0-release.apk` | The theme. **Install this.** | 128,112 bytes |
-| `dcp-v2.2.0-debug.apk` | Same app built unoptimised, signed with the Android debug key and installed as `com.dcp.punch.debug` under the name **DCP (debug)**. Only useful if you are attaching a debugger; it sits alongside the release build rather than replacing it. | 170,166 bytes |
-| `web/dynamic-camera-punch-v2.2.0.html` | The demonstration, openable in any browser. | — |
+| `dcp-v2.3.0-release.apk` | The theme. **Install this.** | 132,944 bytes |
+| `dcp-v2.3.0-debug.apk` | Same app built unoptimised, signed with the Android debug key and installed as `com.dcp.punch.debug` under the name **DCP (debug)**. Only useful if you are attaching a debugger; it sits alongside the release build rather than replacing it. | 177,754 bytes |
+| `web/dynamic-camera-punch-v2.3.0.html` | The demonstration, openable in any browser. | — |
 
 ### Check the download before you install it
 
@@ -145,15 +164,15 @@ corrupt. The size column above is the quickest tell — a few KB means you got a
 web page. To be certain:
 
 ```
-sha256  release  92c606128b236abf9b0bdd78ceaf8b8bb266df6a04822d4ef7bcc43915f0bb2a
-sha256  debug    eb02b1867a9c7ec31df961440a74d35c78ceed8487359fc377ea6f22129cb08c
+sha256  release  cecedbe366288a4085dd3fc39be25a0f0c06608efed077bfc73c919709abba1c
+sha256  debug    88dcf1ef686654b83ddb6dc0821ca2c6af6c33963f76c77d5ef6efe87f3757fb
 ```
 
 Both are signed with APK Signature Scheme v2 and verify with `apksigner verify`
 across the whole supported range, API 24 to 34.
 
 The version also appears in the app's own header, and in Android's app info as
-version 2.2.0 (code 5). See [CHANGELOG.md](CHANGELOG.md) for what changed.
+version 2.3.0 (code 6). See [CHANGELOG.md](CHANGELOG.md) for what changed.
 
 Then open the app and work down the setup list:
 
@@ -165,7 +184,7 @@ Then open the app and work down the setup list:
 3. **Show notifications** — Android requires an ongoing notification for a service
    that runs indefinitely. That notice is also how you turn the theme off.
 
-Minimum Android 7.0 (API 24). ~128 KB on disk, ~30–45 MB resident. No network access.
+Minimum Android 7.0 (API 24). ~133 KB on disk, ~30–45 MB resident. No network access.
 
 ## Permissions, and why each one is there
 
@@ -195,6 +214,7 @@ android/app/src/main/java/com/dcp/punch/
   BootReceiver.java           optional restart-on-boot
   data/
     Presentation.java         one thing the island can show
+    Sources.java              what the island is allowed to show, by kind and by app
     IslandStore.java          state: an alert over a stack of ≤2 activities
     DcpNotificationListener.java   real notifications → presentations
     MediaMonitor.java         MediaSession → live track + transport controls

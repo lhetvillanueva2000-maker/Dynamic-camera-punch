@@ -129,6 +129,49 @@
                 android:text="@string/variant_b_desc" />
         </LinearLayout>
 
+        <!-- ── What the island shows ──────────────────────────────── -->
+        <LinearLayout style="@style/Card" android:orientation="vertical">
+
+            <TextView style="@style/CardTitle" android:text="@string/sources_title" />
+            <TextView style="@style/CardBody" android:text="@string/sources_desc" />
+
+            <!-- Rows are built in MainActivity, one per Sources.Source, so
+                 adding a new kind of content never means editing this file. -->
+            <LinearLayout
+                android:id="@+id/sources_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="8dp" />
+        </LinearLayout>
+
+        <!-- ── Per-app control ────────────────────────────────────── -->
+        <LinearLayout style="@style/Card" android:orientation="vertical">
+
+            <TextView style="@style/CardTitle" android:text="@string/apps_title" />
+            <TextView
+                android:id="@+id/apps_desc"
+                style="@style/CardBody"
+                android:text="@string/apps_empty" />
+
+            <LinearLayout
+                android:id="@+id/apps_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="8dp" />
+
+            <Button
+                android:id="@+id/apps_reset"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_pill"
+                android:text="@string/apps_reset"
+                android:textAllCaps="false"
+                android:textColor="@color/text" />
+        </LinearLayout>
+
         <!-- ── Keep the island on screen ──────────────────────────── -->
         <LinearLayout
             style="@style/Card"

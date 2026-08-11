@@ -93,6 +93,9 @@ public class IslandView extends View {
     private float fromW, fromH, fromR;
     private float tgtW, tgtH, tgtR;
     private ValueAnimator morph;
+    /** The three cancellable pieces of a close; see cancelClose(). */
+    private ValueAnimator closeContentFade, closeViewFade;
+    private Runnable closeHandoff;
     private float contentAlpha = 1f;
     private float pressScale = 1f;
 
@@ -289,8 +292,25 @@ public class IslandView extends View {
         });
     }
 
+    /**
+     * Abandon a close in progress.
+     *
+     * A notification arriving while the island is on its way out would otherwise
+     * be drawn by a view whose fade-out animator is still running, and the two
+     * would fight all the way to alpha 0 — the island would appear and then
+     * silently vanish. Every part of the close has to be cancellable: the
+     * content fade, the delayed hand-off, and the view fade.
+     */
+    private void cancelClose() {
+        if (closeContentFade != null) { closeContentFade.cancel(); closeContentFade = null; }
+        if (closeViewFade != null) { closeViewFade.cancel(); closeViewFade = null; }
+        if (closeHandoff != null) { removeCallbacks(closeHandoff); closeHandoff = null; }
+        animate().cancel();
+    }
+
     /** Snap to the idle cutout with no animation, ready to be shown. */
     public void resetToIdle() {
+        cancelClose();
         if (morph != null) morph.cancel();
         shown = null;
         contentAlpha = 1f;
@@ -310,16 +330,24 @@ public class IslandView extends View {
      * back into the hardware.
      */
     public void playClose(Runnable onDone) {
+        cancelClose();
         if (morph != null) morph.cancel();
 
-        animate(contentAlpha, 0f, 120, a -> { contentAlpha = a; invalidate(); }, () -> {
+        closeContentFade = animate(contentAlpha, 0f, 120,
+                a -> { contentAlpha = a; invalidate(); }, () -> {
+            closeContentFade = null;
             shown = null;
             startMorph();
             // Let the shrink land before the fade begins, or the two read as one
             // muddy dissolve instead of a collapse.
-            postDelayed(() -> animate(1f, 0f, 150,
-                    a -> setAlpha(a),
-                    onDone), (long) (MORPH_MS * 0.62f));
+            closeHandoff = () -> {
+                closeHandoff = null;
+                closeViewFade = animate(1f, 0f, 150, this::setAlpha, () -> {
+                    closeViewFade = null;
+                    onDone.run();
+                });
+            };
+            postDelayed(closeHandoff, (long) (MORPH_MS * 0.62f));
         });
     }
 
@@ -363,19 +391,29 @@ public class IslandView extends View {
 
     private static float lerp(float a, float b, float t) { return a + (b - a) * t; }
 
-    private void animate(float from, float to, long ms,
-                         java.util.function.Consumer<Float> onUpdate, Runnable onEnd) {
+    /**
+     * Returns the animator so a caller that may need to abandon it can hold on.
+     * onEnd deliberately does not fire on cancel — a cancelled close must not
+     * run the hand-off that tears the window down.
+     */
+    private ValueAnimator animate(float from, float to, long ms,
+                                  java.util.function.Consumer<Float> onUpdate, Runnable onEnd) {
         ValueAnimator va = ValueAnimator.ofFloat(from, to);
         va.setDuration(ms);
         va.addUpdateListener(a -> onUpdate.accept((Float) a.getAnimatedValue()));
         if (onEnd != null) {
             va.addListener(new android.animation.AnimatorListenerAdapter() {
-                @Override public void onAnimationEnd(android.animation.Animator animation) {
-                    onEnd.run();
+                private boolean cancelled;
+                @Override public void onAnimationCancel(android.animation.Animator a) {
+                    cancelled = true;
+                }
+                @Override public void onAnimationEnd(android.animation.Animator a) {
+                    if (!cancelled) onEnd.run();
                 }
             });
         }
         va.start();
+        return va;
     }
 
     @Override

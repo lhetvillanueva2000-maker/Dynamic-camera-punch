@@ -19,7 +19,7 @@ const fs = require('fs');
 const { chromium } = require('playwright');
 
 const ROOT = path.resolve(__dirname, '..');
-const PAGE = 'file://' + path.join(ROOT, 'web', 'dynamic-camera-punch-v2.2.0.html');
+const PAGE = 'file://' + path.join(ROOT, 'web', 'dynamic-camera-punch-v2.3.0.html');
 
 let fails = 0;
 const ok = (m) => console.log('  ✓ ' + m);

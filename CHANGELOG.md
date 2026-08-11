@@ -1,5 +1,50 @@
 # Changelog
 
+## v2.3.0 — you choose what it shows
+
+**The overlay really does come down now.** v2.2.0 removed the window when the
+store was empty, and on a real device the store was never empty — so the island
+stayed up regardless. The cause was one line: any notification carrying
+`FLAG_ONGOING_EVENT` became a persistent activity, and an activity holds the
+island until its notification is removed. But most ongoing notifications are not
+events at all. They are status notices that never go away: the keyboard, a sync
+adapter, USB mode, storage, a VPN. A phone or tablet always has several.
+
+Only the five categories the island genuinely has something to say about are
+allowed to persist — `call`, `navigation`, `alarm`, `stopwatch`, `progress`.
+Everything else is a passing alert that expires on its own. The catch-up pass
+that runs when notification access is granted now replays only those live
+activities too, instead of firing a burst of stale alerts.
+
+**A new control over everything the island shows.** Two levels, both in the app:
+
+- **What the island shows** — a switch per kind: messages, music and media,
+  calls, timers and alarms, navigation, downloads, other notifications, charging,
+  battery low, ringer changes, headphones. All on by default.
+- **Apps** — every app the island has heard from, each with its own switch. The
+  list is learned from arriving notifications rather than enumerated, so it still
+  needs no `QUERY_ALL_PACKAGES`, and an app that has never sent anything is never
+  offered as a decision. App names come from the platform where package
+  visibility allows and fall back to the package name where it does not, which is
+  a worse label but an honest one.
+
+Switching a source or an app off clears whatever it had on the island rather than
+leaving it there until something else displaces it.
+
+Also fixed: a race in the close animation. A notification arriving while the
+island was on its way out would be drawn by a view whose fade-out was still
+running, and the two fought to alpha 0 — the island would appear and then
+silently vanish. Every part of the close is cancellable now, and the animator's
+completion callback no longer fires on cancel, so an abandoned close can never
+tear down a window that has just been given something to show.
+
+Verified: the classification table exercised directly against the compiled class
+for all twelve notification categories — the five activity ones persist, `status`,
+`service` and `sys` do not, and anything carrying MessagingStyle routes to
+MESSAGES whatever its category; 23 browser assertions over the demo; both APKs
+signature-verified across API 24–34; Lint zero errors. Still not launched on a
+device here — no KVM in this environment.
+
 ## v2.2.0 — efficient, and out of the way
 
 Everything here came from running v2.1.0 on a real phone — a 3.5 GB device,

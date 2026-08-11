@@ -96,8 +96,35 @@ public class DcpNotificationListener extends NotificationListenerService {
         String cat = n.category == null ? "" : n.category;
         boolean ongoing = (n.flags & Notification.FLAG_ONGOING_EVENT) != 0;
 
+        // THIS is what kept the overlay up permanently. Anything ongoing used to
+        // become an ACTIVITY, and an activity stays on the island until its
+        // notification is removed. But most ongoing notifications are not events
+        // at all — they are status notices that never go away: the keyboard, a
+        // sync adapter, USB mode, storage, a VPN. A phone or tablet always has
+        // several, so the store was never empty and the island never came down.
+        //
+        // Only the categories the island genuinely has something to say about
+        // are allowed to persist. Everything else is a passing alert.
+        if (ongoing && !isActivityCategory(cat)) return;
+
+        // On connect we replay whatever is already posted. Replaying old alerts
+        // would fire a burst of stale events at the user, so only live
+        // activities — a call in progress, a running timer — are picked up.
+        if (!isNew && !isActivityCategory(cat)) return;
+
+        // Learn the app, then ask whether the user wants to hear from it and
+        // from this kind of thing at all. Both filters run before anything is
+        // built, so a muted source costs nothing but the lookup.
+        Sources sources = Sources.get(this);
+        sources.remember(sbn.getPackageName());
+        if (!sources.isAppAllowed(sbn.getPackageName())) return;
+
+        Msg peek = latestMessage(n);
+        boolean isMessage = peek != null || Notification.CATEGORY_MESSAGE.equals(cat);
+        if (!sources.isEnabled(sourceFor(cat, isMessage))) return;
+
         Presentation p = new Presentation(key(sbn),
-                (ongoing || isActivityCategory(cat))
+                isActivityCategory(cat)
                         ? Presentation.Kind.ACTIVITY
                         : Presentation.Kind.ALERT);
 
@@ -114,10 +141,7 @@ public class DcpNotificationListener extends NotificationListenerService {
         // and the message — not the sender — on the compact pill. Anything
         // carrying MessagingStyle counts, which is every mainstream chat app;
         // CATEGORY_MESSAGE catches the ones that only set a category.
-        Msg msg = latestMessage(n);
-        if (msg != null || Notification.CATEGORY_MESSAGE.equals(cat)) {
-            applyMessage(p, n, msg, title, body);
-        }
+        if (isMessage) applyMessage(p, n, peek, title, body);
 
         switch (cat) {
             case Notification.CATEGORY_CALL:
@@ -356,6 +380,19 @@ public class DcpNotificationListener extends NotificationListenerService {
             if (last != null && last.length() > 0) return last.toString().trim();
         }
         return text(n, Notification.EXTRA_TEXT);
+    }
+
+    /** Which control-panel switch governs this notification. */
+    private static Sources.Source sourceFor(String cat, boolean isMessage) {
+        if (isMessage) return Sources.Source.MESSAGES;
+        switch (cat) {
+            case Notification.CATEGORY_CALL:       return Sources.Source.CALLS;
+            case Notification.CATEGORY_ALARM:
+            case Notification.CATEGORY_STOPWATCH:  return Sources.Source.TIMERS;
+            case Notification.CATEGORY_NAVIGATION: return Sources.Source.NAVIGATION;
+            case Notification.CATEGORY_PROGRESS:   return Sources.Source.PROGRESS;
+            default:                               return Sources.Source.OTHER;
+        }
     }
 
     private static boolean isActivityCategory(String cat) {

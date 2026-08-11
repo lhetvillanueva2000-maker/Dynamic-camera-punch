@@ -102,6 +102,7 @@ public class MediaMonitor {
 
     private void publish() {
         if (controller == null) { store.dismiss(ID); return; }
+        if (!Sources.get(ctx).isEnabled(Sources.Source.MEDIA)) { store.dismiss(ID); return; }
 
         MediaMetadata md = controller.getMetadata();
         PlaybackState st = controller.getPlaybackState();

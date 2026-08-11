@@ -48,4 +48,24 @@
 
     <string name="auto_title">Manage memory automatically</string>
     <string name="auto_desc">Let the app keep its own footprint down and release cached artwork as it goes.</string>
+
+    <string name="sources_title">What the island shows</string>
+    <string name="sources_desc">Everything is on by default. Switch off anything you would rather it stayed quiet about.</string>
+
+    <string name="src_messages">Messages</string>
+    <string name="src_media">Music and media</string>
+    <string name="src_calls">Calls</string>
+    <string name="src_timers">Timers and alarms</string>
+    <string name="src_navigation">Navigation</string>
+    <string name="src_progress">Downloads and progress</string>
+    <string name="src_other">Other notifications</string>
+    <string name="src_charging">Charging</string>
+    <string name="src_battery">Battery low</string>
+    <string name="src_ringer">Ringer changes</string>
+    <string name="src_headphones">Headphones</string>
+
+    <string name="apps_title">Apps</string>
+    <string name="apps_desc">Apps the island has heard from. Switch one off and it will never reach the cutout again.</string>
+    <string name="apps_empty">Apps appear here once they send their first notification. Grant notification access and use your phone for a while.</string>
+    <string name="apps_reset">Forget every app and start over</string>
 </resources>
