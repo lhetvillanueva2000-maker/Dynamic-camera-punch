@@ -4,7 +4,7 @@
 
 # Dynamic Camera Punch
 
-### v2.0.0 — the theme
+### v2.0.1 — the theme
 
 **A Dynamic Island for your Android punch-hole — running over every app on the phone.**
 
@@ -94,20 +94,35 @@ system instead of leaving a fattened heap inside the process that hosts the over
 ## Install
 
 ```bash
-adb install -r dist/dcp-v2.0.0-release.apk
+adb install -r dist/dcp-v2.0.1-release.apk
 ```
 
 Every launchable file names its own version, so there is never any doubt about
 which build is in front of you:
 
-| File | What it is |
-|---|---|
-| `dcp-v2.0.0-release.apk` | The theme. Install this. |
-| `dcp-v2.0.0-debug.apk` | Debug build; installs alongside the release one. |
-| `web/dynamic-camera-punch-v2.0.0.html` | The demonstration, openable in any browser. |
+| File | What it is | Size |
+|---|---|---|
+| `dcp-v2.0.1-release.apk` | The theme. **Install this.** | 121,696 bytes |
+| `dcp-v2.0.1-debug.apk` | Same app built unoptimised, signed with the Android debug key and installed as `com.dcp.punch.debug` under the name **DCP (debug)**. Only useful if you are attaching a debugger; it sits alongside the release build rather than replacing it. | 160,494 bytes |
+| `web/dynamic-camera-punch-v2.0.1.html` | The demonstration, openable in any browser. | — |
+
+### Check the download before you install it
+
+A phone browser that lands on a GitHub *page* rather than the file saves an HTML
+error page under the `.apk` name, and the installer then reports the APK as
+corrupt. The size column above is the quickest tell — a few KB means you got a
+web page. To be certain:
+
+```
+sha256  release  9ded28fb62f853a3601619fc237fc2218d8886ac1263011bcfef9107b5325622
+sha256  debug    2c4d98760ab7b10362b6421524a0d32bc2614546d3503ee79f4c77eba0365244
+```
+
+Both are signed with APK Signature Scheme v2 and verify with `apksigner verify`
+across the whole supported range, API 24 to 34.
 
 The version also appears in the app's own header, and in Android's app info as
-version 2.0.0 (code 2). See [CHANGELOG.md](CHANGELOG.md) for what changed.
+version 2.0.1 (code 3). See [CHANGELOG.md](CHANGELOG.md) for what changed.
 
 Then open the app and work down the setup list:
 
@@ -132,7 +147,7 @@ Nothing is requested speculatively — every entry is read by code in this app.
 | `POST_NOTIFICATIONS` | The ongoing notification the OS requires the service to have. |
 | `RECEIVE_BOOT_COMPLETED` | Optional "start on boot", off by default. |
 | `BIND_NOTIFICATION_LISTENER_SERVICE` | Read notifications and media sessions. User-granted in Settings, revocable at any time. |
-| `com.dcp.punch.permission.INTERNAL` | Our own signature-level permission, guarding one private broadcast between our two processes. |
+| `${applicationId}.permission.INTERNAL` | Our own signature-level permission, guarding one private broadcast between our two processes. Named after the application id rather than hard-coded, so the debug build declares its own and the two can coexist on one device. |
 
 **Deliberately not requested:** `QUERY_ALL_PACKAGES` (icons come from the
 notification itself), `READ_PHONE_STATE` (call state is read from the dialer's

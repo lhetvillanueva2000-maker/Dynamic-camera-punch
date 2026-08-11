@@ -6,11 +6,11 @@ Two things ship here: the **APK** and everything that produces it.
 
 | File | Size | Notes |
 |---|---|---|
-| `dist/dcp-v2.0.0-release.apk` | ~120 KB | Minified, resource-shrunk, signed. Install this one. |
-| `dist/dcp-v2.0.0-debug.apk` | ~160 KB | Debug-signed, `applicationId` suffixed `.debug` so it installs alongside the release build. |
+| `dist/dcp-v2.0.1-release.apk` | 121,696 B | Minified, resource-shrunk, signed with the project key. Install this one. |
+| `dist/dcp-v2.0.1-debug.apk` | 160,494 B | Unoptimised and debug-signed. `applicationId` is suffixed `.debug` and the custom permission is named after it, so it genuinely installs alongside the release build instead of colliding with it. Labelled **DCP (debug)** on the launcher. |
 
 ```bash
-adb install -r dist/dcp-v2.0.0-release.apk
+adb install -r dist/dcp-v2.0.1-release.apk
 ```
 
 Package `com.dcp.punch` · minSdk 24 (Android 7.0) · targetSdk 34 · no network access.
@@ -26,11 +26,11 @@ produced from a source file in this package:
 
 | Inside the APK | Comes from |
 |---|---|
-| `assets/web/**` — the live demonstration: `dynamic-camera-punch-v2.0.0.html`, 4 CSS files, 6 JS files, `logo.svg` | `web/` — copied in verbatim by the `syncWebAssets` Gradle task |
+| `assets/web/**` — the live demonstration: `dynamic-camera-punch-v2.0.1.html`, 4 CSS files, 6 JS files, `logo.svg` | `web/` — copied in verbatim by the `syncWebAssets` Gradle task |
 | `classes.dex` — the overlay service, the Canvas-drawn island, the RAM dial, the notification/media readers | `android/app/src/main/java/com/dcp/punch/**` (13 classes across `data/`, `overlay/`, `mem/`, `ui/`) |
 | `AndroidManifest.xml` (binary) | `android/app/src/main/AndroidManifest.xml` |
 | `resources.arsc` + `res/**` — launcher icons, themes, colours, strings | `android/app/src/main/res/**` |
-| `META-INF/*` — v2 signature block | `android/keystore/dcp-demo.jks` via `android/keystore.properties` |
+| The APK Signing Block — a v2 signature, sitting between the entries and the central directory rather than in `META-INF/` (there is no v1 JAR signature) | `android/keystore/dcp-demo.jks` via `android/keystore.properties` |
 
 The APK carries **no libraries at all** — no AndroidX, no Kotlin runtime, no
 third-party code. The island is framework `View` + `Canvas` drawing, which is why
@@ -39,8 +39,8 @@ a system-wide overlay plus a full web demo fits in 120 KB.
 Verify any of this yourself:
 
 ```bash
-unzip -l dist/dcp-v2.0.0-release.apk
-apksigner verify --print-certs dist/dcp-v2.0.0-release.apk
+unzip -l dist/dcp-v2.0.1-release.apk
+apksigner verify --print-certs dist/dcp-v2.0.1-release.apk
 ```
 
 ## The sources

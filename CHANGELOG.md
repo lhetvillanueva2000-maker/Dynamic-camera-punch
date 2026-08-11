@@ -1,5 +1,29 @@
 # Changelog
 
+## v2.0.1 — installable again
+
+**Fixes an "App not installed" failure that made the two v2.0.0 APKs mutually
+exclusive.** Both declared the same custom permission name,
+`com.dcp.punch.permission.INTERNAL`, because it was hard-coded rather than
+derived from the application id. A custom permission name is global to the
+device: when two packages signed with different keys declare the same one, the
+second to be installed is rejected with `INSTALL_FAILED_DUPLICATE_PERMISSION`,
+which Android surfaces as a bare "App not installed" with no explanation. Since
+debug is signed with the Android debug key and release with the project key,
+installing either one blocked the other — exactly the side-by-side install the
+README advertised.
+
+- The permission, and the two private broadcast actions beside it, are now scoped
+  to `${applicationId}`. The debug build owns
+  `com.dcp.punch.debug.permission.INTERNAL` and its own IPC surface.
+- The debug build is labelled **DCP (debug)** on the launcher, so two installed
+  copies are tellable apart.
+- Both APKs verify under `apksigner` for the full API 24–34 range, and the
+  README now publishes their SHA-256 sums so a truncated or HTML-error-page
+  download can be spotted before the installer refuses it.
+
+No change to the island, the overlay, the RAM dial or the demonstration.
+
 ## v2.0.0 — the theme
 
 The island moved out of the sandbox and onto the phone.

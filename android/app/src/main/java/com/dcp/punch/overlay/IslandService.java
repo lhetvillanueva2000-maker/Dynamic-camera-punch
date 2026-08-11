@@ -18,6 +18,7 @@ import android.view.Gravity;
 import android.view.View;
 import android.view.WindowManager;
 
+import com.dcp.punch.BuildConfig;
 import com.dcp.punch.DcpApp;
 import com.dcp.punch.R;
 import com.dcp.punch.data.IslandStore;
@@ -48,13 +49,19 @@ public class IslandService extends Service implements IslandStore.Listener {
     private static final String CHANNEL = "dcp_theme";
     private static final int NOTIF_ID = 42;
 
+    /* These three are scoped to the application id rather than hard-coded to
+       com.dcp.punch, so the debug build owns its own private IPC surface and can
+       sit on the device next to the release build. See AndroidManifest for what
+       a shared custom permission name costs. */
+
     /** Broadcast the demo activity listens for, so it can free its WebView. */
-    public static final String ACTION_CLOSE_DEMO = "com.dcp.punch.CLOSE_DEMO";
+    public static final String ACTION_CLOSE_DEMO = BuildConfig.APPLICATION_ID + ".CLOSE_DEMO";
 
     /** Signature-level permission gating the above; see AndroidManifest. */
-    public static final String PERMISSION_INTERNAL = "com.dcp.punch.permission.INTERNAL";
+    public static final String PERMISSION_INTERNAL =
+            BuildConfig.APPLICATION_ID + ".permission.INTERNAL";
 
-    public static final String ACTION_STOP = "com.dcp.punch.STOP_THEME";
+    public static final String ACTION_STOP = BuildConfig.APPLICATION_ID + ".STOP_THEME";
 
     private static volatile boolean running;
 

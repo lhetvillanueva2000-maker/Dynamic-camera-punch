@@ -36,11 +36,20 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
     <!-- Private signalling between our own processes (main ↔ :demo). Signature
-         level, so only a build signed with the same key can send it. -->
+         level, so only a build signed with the same key can send it.
+
+         The name is derived from ${applicationId} rather than hard-coded, so the
+         debug build declares com.dcp.punch.debug.permission.INTERNAL. A custom
+         permission name is global to the device: if two packages signed with
+         different keys declare the same one, the second to be installed is
+         rejected outright with INSTALL_FAILED_DUPLICATE_PERMISSION — which
+         Android surfaces as a bare "App not installed." Since debug and release
+         are signed with different keys by design, sharing the name made them
+         mutually exclusive. -->
     <permission
-        android:name="com.dcp.punch.permission.INTERNAL"
+        android:name="${applicationId}.permission.INTERNAL"
         android:protectionLevel="signature" />
-    <uses-permission android:name="com.dcp.punch.permission.INTERNAL" />
+    <uses-permission android:name="${applicationId}.permission.INTERNAL" />
 
     <application
         android:name=".DcpApp"

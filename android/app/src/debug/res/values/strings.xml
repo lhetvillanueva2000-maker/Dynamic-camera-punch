@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug-variant overrides. The debug APK installs alongside the release one, so
+  the launcher would otherwise show two identically named icons with no way to
+  tell which is which.
+-->
+<resources>
+    <string name="app_name">DCP (debug)</string>
+</resources>
