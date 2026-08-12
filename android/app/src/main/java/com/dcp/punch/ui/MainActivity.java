@@ -37,7 +37,7 @@ public class MainActivity extends Activity {
 
     private static final int REQ_POST_NOTIFS = 10;
 
-    private Switch themeSwitch, bootSwitch, alwaysSwitch, autoSwitch;
+    private Switch themeSwitch, bootSwitch, alwaysSwitch, autoSwitch, hideSwitch;
     private TextView themeStatus, variantA, variantB, variantDesc, ramDetail, demoDesc, alwaysDesc;
     private MemoryGaugeView ramGauge;
     private Button demoButton;
@@ -48,7 +48,7 @@ public class MainActivity extends Activity {
     private Sources sources;
 
     private LinearLayout sourcesList, appsList, capacityPanel;
-    private TextView appsDesc, functionsDesc, capacityButton, capacityBody, capacityNote;
+    private TextView appsDesc, functionsDesc, capacityButton, capacityBody, capacityNote, hideDesc;
 
     /** Set while we programmatically flip the switch, so listeners stay quiet. */
     private boolean binding;
@@ -73,6 +73,8 @@ public class MainActivity extends Activity {
         alwaysSwitch = findViewById(R.id.always_switch);
         alwaysDesc = findViewById(R.id.always_desc);
         autoSwitch = findViewById(R.id.auto_switch);
+        hideSwitch = findViewById(R.id.hide_switch);
+        hideDesc = findViewById(R.id.hide_desc);
         sourcesList = findViewById(R.id.sources_list);
         appsList = findViewById(R.id.apps_list);
         appsDesc = findViewById(R.id.apps_desc);
@@ -122,6 +124,12 @@ public class MainActivity extends Activity {
         autoSwitch.setOnCheckedChangeListener((b, checked) -> {
             if (binding) return;
             memory.setAutoManage(checked);
+            bind();
+        });
+
+        hideSwitch.setOnCheckedChangeListener((b, checked) -> {
+            if (binding) return;
+            prefs.setHideFromShade(checked);
             bind();
         });
 
@@ -191,6 +199,8 @@ public class MainActivity extends Activity {
         alwaysSwitch.setChecked(prefs.isAlwaysVisible());
         alwaysDesc.setText(prefs.isAlwaysVisible() ? R.string.always_on : R.string.always_off);
         autoSwitch.setChecked(memory.isAutoManage());
+        hideSwitch.setChecked(prefs.isHideFromShade());
+        hideDesc.setText(prefs.isHideFromShade() ? R.string.hide_on : R.string.hide_off);
 
         memory.sample();
         ramGauge.refresh();

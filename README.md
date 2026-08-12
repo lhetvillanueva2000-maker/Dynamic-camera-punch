@@ -4,7 +4,7 @@
 
 # Dynamic Camera Punch
 
-### v2.4.0 — the theme
+### v2.5.0 — the theme
 
 **A Dynamic Island for your Android punch-hole — running over every app on the phone.**
 
@@ -133,6 +133,25 @@ through.
 > the apps that have a launcher icon — the ones you would recognise — and nothing
 > else. Services, providers and headless packages stay invisible to it.
 
+## Show only on the island
+
+**Yes, an app can do this, with two limits worth knowing.** The switch is in the
+control panel and it is **off by default**.
+
+On, a notification is cleared from the shade once the island has shown it, so one
+event does not appear in two places. But:
+
+- **The brief banner at the top still appears.** By the time any app is told
+  about a notification the system has already posted it. There is no API for an
+  app to suppress that, and anything claiming otherwise is either a system app or
+  wrong. What this removes is the copy that would otherwise sit in the shade.
+- **Cleared is gone, not hidden.** It is the same dismissal as swiping it away,
+  so the island becomes the only place that event was ever shown. Miss the
+  island and you have missed it. That is why it is off by default.
+
+Ongoing notifications are never touched — they are not clearable, and an app's
+own state display is not ours to delete.
+
 ## Keeping the island on screen
 
 By default, **with nothing to show there is no overlay at all**. The island
@@ -167,7 +186,7 @@ system instead of leaving a fattened heap inside the process that hosts the over
 ## Install
 
 ```bash
-adb install -r dist/dcp-v2.4.0-release.apk
+adb install -r dist/dcp-v2.5.0-release.apk
 ```
 
 Every launchable file names its own version, so there is never any doubt about
@@ -175,9 +194,9 @@ which build is in front of you:
 
 | File | What it is | Size |
 |---|---|---|
-| `dcp-v2.4.0-release.apk` | The theme. **Install this.** | 140,116 bytes |
-| `dcp-v2.4.0-debug.apk` | Same app built unoptimised, signed with the Android debug key and installed as `com.dcp.punch.debug` under the name **DCP (debug)**. Only useful if you are attaching a debugger; it sits alongside the release build rather than replacing it. | 189,406 bytes |
-| `web/dynamic-camera-punch-v2.4.0.html` | The demonstration, openable in any browser. | — |
+| `dcp-v2.5.0-release.apk` | The theme. **Install this.** | 141,972 bytes |
+| `dcp-v2.5.0-debug.apk` | Same app built unoptimised, signed with the Android debug key and installed as `com.dcp.punch.debug` under the name **DCP (debug)**. Only useful if you are attaching a debugger; it sits alongside the release build rather than replacing it. | 192,398 bytes |
+| `web/dynamic-camera-punch-v2.5.0.html` | The demonstration, openable in any browser. | — |
 
 ### Check the download before you install it
 
@@ -187,15 +206,15 @@ corrupt. The size column above is the quickest tell — a few KB means you got a
 web page. To be certain:
 
 ```
-sha256  release  d3d717396f0a25d70566dc5b925104d711fb016f1e494bdd9974632514513110
-sha256  debug    b1fb83724e1a77e0ad3636d66d7dec153540d8bd6c2ddd982b0fa180ec92ed9f
+sha256  release  30184958ae29e949b7548b30e029f6691daa1f77340ecbcacb08db64d4b42e58
+sha256  debug    2a14a3776321b3835d9cc9df14ebc6ee86c98502f0b12f56225d083fb4ef83b0
 ```
 
 Both are signed with APK Signature Scheme v2 and verify with `apksigner verify`
 across the whole supported range, API 24 to 34.
 
 The version also appears in the app's own header, and in Android's app info as
-version 2.4.0 (code 7). See [CHANGELOG.md](CHANGELOG.md) for what changed.
+version 2.5.0 (code 8). See [CHANGELOG.md](CHANGELOG.md) for what changed.
 
 Then open the app and work down the setup list:
 
@@ -207,7 +226,7 @@ Then open the app and work down the setup list:
 3. **Show notifications** — Android requires an ongoing notification for a service
    that runs indefinitely. That notice is also how you turn the theme off.
 
-Minimum Android 7.0 (API 24). ~140 KB on disk, ~30–45 MB resident. No network access.
+Minimum Android 7.0 (API 24). ~142 KB on disk, ~30–45 MB resident. No network access.
 
 ## Permissions, and why each one is there
 

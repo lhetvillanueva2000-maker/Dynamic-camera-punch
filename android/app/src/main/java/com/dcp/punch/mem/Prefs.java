@@ -14,6 +14,7 @@ public final class Prefs {
     private static final String K_HANDLE = "handle_y_fraction";
     private static final String K_ALWAYS = "island_always_visible";
     private static final String K_AUTO_MEM = "auto_memory";
+    private static final String K_HIDE_SHADE = "hide_from_shade";
 
     private static Prefs instance;
 
@@ -60,4 +61,15 @@ public final class Prefs {
     /** Let the app manage its own footprint. On by default. */
     public boolean isAutoMemory() { return sp.getBoolean(K_AUTO_MEM, true); }
     public void setAutoMemory(boolean v) { sp.edit().putBoolean(K_AUTO_MEM, v).apply(); }
+
+    /**
+     * Clear a notification from the shade once the island has shown it, so the
+     * same event does not appear in two places.
+     *
+     * Off by default, and it should be: the shade is the system's record of what
+     * you have not dealt with yet, and this throws that record away. The island
+     * becomes your only chance to see the notification.
+     */
+    public boolean isHideFromShade() { return sp.getBoolean(K_HIDE_SHADE, false); }
+    public void setHideFromShade(boolean v) { sp.edit().putBoolean(K_HIDE_SHADE, v).apply(); }
 }

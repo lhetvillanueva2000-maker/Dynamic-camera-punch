@@ -12,6 +12,7 @@ import android.service.notification.StatusBarNotification;
 import android.text.TextUtils;
 
 import com.dcp.punch.DcpApp;
+import com.dcp.punch.mem.Prefs;
 
 /**
  * Real notifications become island presentations.
@@ -190,6 +191,37 @@ public class DcpNotificationListener extends NotificationListenerService {
         }
 
         DcpApp.get().store().present(p);
+        maybeHideFromShade(sbn, isNew);
+    }
+
+    /**
+     * Clear the notification from the shade once the island has taken it, so one
+     * event does not appear in two places.
+     *
+     * Two honest limits, both stated in the control panel:
+     *
+     *   The heads-up banner still happens. By the time a listener is told about
+     *   a notification the system has already posted it, and there is no API for
+     *   an app to suppress that. What this removes is the copy that would
+     *   otherwise sit in the shade afterwards.
+     *
+     *   The notification is gone, not hidden. cancelNotification is the same
+     *   dismissal as swiping it away, so the island becomes the only place that
+     *   event was ever shown. That is why this is off by default.
+     *
+     * Ongoing notifications are left alone: they are not clearable, the platform
+     * would refuse, and an app's own state display is not ours to delete.
+     */
+    private void maybeHideFromShade(StatusBarNotification sbn, boolean isNew) {
+        if (!isNew) return;                       // never touch the catch-up pass
+        if (!Prefs.get(this).isHideFromShade()) return;
+        if (!sbn.isClearable()) return;
+        try {
+            cancelNotification(sbn.getKey());
+        } catch (Exception e) {
+            // A notification can go away between the post and this call, and a
+            // listener can be disconnected mid-flight. Neither is worth a crash.
+        }
     }
 
     /* ── Messages ────────────────────────────────────────────────────── */

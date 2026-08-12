@@ -88,6 +88,11 @@
     <string name="capacity_note">The island shows at most two activities and one alert at a time whatever the ceiling says — that is a design limit, not a memory one. Raising the ceiling buys room to track more, not more on screen at once.</string>
     <string name="capacity_tight">This ceiling is below what the island itself needs. Raise it on the gauge above.</string>
 
+    <string name="hide_title">Show only on the island</string>
+    <string name="hide_on">On — a notification is cleared from the shade once the island has shown it.</string>
+    <string name="hide_off">Off — notifications stay in your notification shade as normal.</string>
+    <string name="hide_warn">Two things to know before you turn this on. The brief banner at the top of the screen still appears: by the time any app is told about a notification the system has already posted it, and there is no way to suppress that. And clearing is the same as swiping it away — the notification is gone, not hidden, so if you miss the island you have missed it. Ongoing notifications are never touched.</string>
+
     <string name="made_by">Made by User (Elijah)  (I hate pirating :) )</string>
     <string name="made_with" translatable="false">HTML5 • CSS3 • vanilla ES6+ • zero dependencies</string>
 </resources>

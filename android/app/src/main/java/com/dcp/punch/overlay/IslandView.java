@@ -532,12 +532,25 @@ public class IslandView extends View {
     }
 
     private void drawExpanded(Canvas canvas, RectF box, Presentation p, int alpha) {
-        float left = box.left + PAD_X * d;
-        float right = box.right - PAD_X * d;
+        float padX = PAD_X * d;
+        float fullL = box.left + padX, fullR = box.right - padX;
         float y = box.top + EXP_PAD_TOP * d;
 
         // Header: art / icon, then two lines of text.
         float artSize = 52 * d;
+
+        /* Centre the content block on the island's own axis.
+           The art and the text are measured as one unit and that unit is
+           centred, rather than the art being pinned to the left padding with
+           the text trailing off it. With short content — a brief track title,
+           an app name — a left-pinned block sits visibly off to one side while
+           the action row underneath is centred, and the two rows disagree.
+           Measuring and centring puts every row of the expanded view on the
+           same axis. Content wider than the island simply fills the padded
+           span, so nothing is ever squeezed to achieve it. */
+        float blockW = Math.min(artSize + 12 * d + widestLine(p), fullR - fullL);
+        float left = box.centerX() - blockW / 2f;
+        float right = left + blockW;
         if (p.art != null) {
             drawArt(canvas, p.art, left, y, artSize, 13 * d, alpha);
         } else {
@@ -603,6 +616,26 @@ public class IslandView extends View {
                 x += size + spacing;
             }
         }
+    }
+
+    /**
+     * How wide the text column wants to be, so the header can be centred as a
+     * unit. Measured, not guessed — the two lines use different paints and the
+     * trailing value uses a third size.
+     */
+    private float widestLine(Presentation p) {
+        float w = 0;
+        if (!TextUtils.isEmpty(p.title)) w = titleText.measureText(p.title);
+        if (!TextUtils.isEmpty(p.subtitle)) w = Math.max(w, subText.measureText(p.subtitle));
+
+        String trailing = trailingValue(p);
+        if (trailing != null) {
+            float was = compactText.getTextSize();
+            compactText.setTextSize(15 * d);
+            w += compactText.measureText(trailing) + 10 * d;
+            compactText.setTextSize(was);
+        }
+        return w;
     }
 
     private String trailingValue(Presentation p) {

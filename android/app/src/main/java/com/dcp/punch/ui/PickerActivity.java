@@ -36,10 +36,14 @@ import java.util.List;
  *
  * The app list is read through PackageManager under the manifest's <queries>
  * declaration. That means launcher-visible apps only — this app has never asked
- * for QUERY_ALL_PACKAGES and still does not. Icons are loaded once, scaled down
- * to the size they are drawn at, and cached: a full app list at full resolution
- * is tens of megabytes, which is exactly the kind of waste the rest of this
- * project has been busy deleting.
+ * for QUERY_ALL_PACKAGES and still does not.
+ *
+ * Icons are the one real cost on this screen, and they are loaded lazily: only
+ * rows within a screen of the viewport are decoded, each is rasterised straight
+ * into a bitmap the size it is drawn at, and rows that scroll well clear have
+ * theirs released. Decoding the whole drawer up front would be roughly 11 MB of
+ * bitmaps for a list showing a dozen rows — the largest allocation this app
+ * would ever make, on a screen that is open for a few seconds.
  */
 public class PickerActivity extends Activity {
 
@@ -61,8 +65,9 @@ public class PickerActivity extends Activity {
     private static class Row {
         String id;          // package name, or Source.key
         String label;
-        Drawable icon;
         View view;
+        ImageView iconView;
+        boolean iconLoaded;
     }
 
     @Override
@@ -92,6 +97,17 @@ public class PickerActivity extends Activity {
 
         if (appsMode) loadApps(); else loadFunctions();
         buildRows();
+
+        if (appsMode) {
+            // Icons are decoded only for the rows you can actually see. Doing it
+            // up front for a couple of hundred apps is ~11 MB of bitmaps for a
+            // screen that shows a dozen — the single largest allocation this app
+            // would make, on a screen that is open for a few seconds.
+            ScrollView sv = findViewById(R.id.picker_scroll);
+            sv.setOnScrollChangeListener((v, x, y, ox, oy) -> syncIcons());
+            sv.getViewTreeObserver().addOnGlobalLayoutListener(this::syncIcons);
+            sv.post(this::syncIcons);
+        }
     }
 
     /* ── Contents ────────────────────────────────────────────────────── */
@@ -116,19 +132,18 @@ public class PickerActivity extends Activity {
         }
 
         List<Row> out = new ArrayList<>();
+        java.util.Set<String> seenPkgs = new java.util.HashSet<>();
         for (ResolveInfo ri : found) {
             if (ri.activityInfo == null) continue;
             String pkg = ri.activityInfo.packageName;
             if (getPackageName().equals(pkg)) continue;        // not ourselves
-            boolean dupe = false;
-            for (Row existing : out) if (existing.id.equals(pkg)) { dupe = true; break; }
-            if (dupe) continue;                                 // multi-launcher apps
+            if (!seenPkgs.add(pkg)) continue;                  // multi-launcher apps
 
             Row r = new Row();
             r.id = pkg;
             CharSequence lbl = ri.loadLabel(pm);
             r.label = lbl == null ? pkg : lbl.toString();
-            r.icon = scaled(ri.loadIcon(pm));
+            // Deliberately no icon here — see syncIcons().
             out.add(r);
         }
         Collections.sort(out, (a, b) -> a.label.compareToIgnoreCase(b.label));
@@ -168,7 +183,7 @@ public class PickerActivity extends Activity {
 
             if (appsMode) {
                 ImageView iv = new ImageView(this);
-                iv.setImageDrawable(r.icon);
+                r.iconView = iv;
                 LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(iconPx, iconPx);
                 lp.rightMargin = Math.round(12 * d);
                 row.addView(iv, lp);
@@ -224,6 +239,45 @@ public class PickerActivity extends Activity {
         if (picked) sources.addFunction(s); else sources.removeFunction(s);
     }
 
+    /**
+     * Load the icons you can see and drop the ones you cannot.
+     *
+     * The visible band is padded by one screen height in each direction so a
+     * flick does not scroll into a column of blanks, and rows outside twice
+     * that have their bitmap released. Peak stays around a megabyte instead of
+     * climbing with the size of the app drawer.
+     */
+    private void syncIcons() {
+        ScrollView sv = findViewById(R.id.picker_scroll);
+        if (sv == null) return;
+        int top = sv.getScrollY();
+        int bottom = top + sv.getHeight();
+        int near = sv.getHeight();
+        int far = near * 2;
+
+        for (Row r : rows) {
+            if (r.view == null || r.iconView == null) continue;
+            if (r.view.getVisibility() != View.VISIBLE) continue;
+
+            int y = r.view.getTop();
+            boolean isNear = y > top - near && y < bottom + near;
+            boolean isFar = y < top - far || y > bottom + far;
+
+            if (isNear && !r.iconLoaded) {
+                r.iconView.setImageDrawable(icon(r.id));
+                r.iconLoaded = true;
+            } else if (isFar && r.iconLoaded) {
+                r.iconView.setImageDrawable(null);
+                r.iconLoaded = false;
+            }
+        }
+    }
+
+    private Drawable icon(String pkg) {
+        try { return scaled(getPackageManager().getApplicationIcon(pkg)); }
+        catch (Exception e) { return null; }
+    }
+
     private void filter(String q) {
         String needle = q == null ? "" : q.trim().toLowerCase(java.util.Locale.getDefault());
         for (Row r : rows) {
@@ -233,6 +287,21 @@ public class PickerActivity extends Activity {
                     || r.id.toLowerCase(java.util.Locale.getDefault()).contains(needle);
             r.view.setVisibility(show ? View.VISIBLE : View.GONE);
         }
+        // The rows moved, so what is on screen changed with them.
+        if (appsMode) findViewById(R.id.picker_scroll).post(this::syncIcons);
+    }
+
+    @Override
+    protected void onDestroy() {
+        // Hand the bitmaps back rather than waiting for the activity to be
+        // collected. This screen can hold a few hundred rows.
+        for (Row r : rows) {
+            if (r.iconView != null) r.iconView.setImageDrawable(null);
+            r.view = null;
+            r.iconView = null;
+        }
+        rows.clear();
+        super.onDestroy();
     }
 
     @Override

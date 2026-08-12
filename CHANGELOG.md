@@ -1,5 +1,43 @@
 # Changelog
 
+## v2.5.0 — one axis, one copy, fewer bitmaps
+
+**The expanded view is centred as a whole.** The art and the text are measured
+as one block and that block is centred on the island's axis, instead of the art
+being pinned to the left padding with the text trailing off it. With short
+content the old layout put the header off to one side while the action row
+underneath was centred, and the two rows disagreed. Content wider than the
+island simply fills the padded span, so nothing is squeezed to achieve it.
+
+On the reported off-centre buttons: the action row was already centred in code
+(`box.centerX() - totalW / 2`), and three details of the screenshot say the panel
+in it was the system's own media notification rather than the island — it showed
+two transport buttons where this app always draws three for media, it had a seek
+thumb on the progress line that this app does not draw, and its controls were
+left-aligned in a way nothing here produces. Which is exactly the duplicate the
+next item removes.
+
+**Show only on the island.** A new switch, off by default: once the island has
+shown a notification, it is cleared from the shade so one event does not appear
+in two places. Two honest limits, both stated in the app and the README — the
+brief heads-up banner still appears, because by the time any listener is told
+about a notification the system has already posted it and there is no API to
+suppress that; and clearing is the same dismissal as swiping it away, so the
+notification is gone rather than hidden. Ongoing notifications are never touched.
+
+**The picker loads icons lazily.** It was decoding every installed app's icon up
+front — around 11 MB of bitmaps for a list showing a dozen rows, and the largest
+allocation this app would ever make. Now only rows within a screen of the
+viewport are decoded, each rasterised straight into a bitmap the size it is drawn
+at, with rows that scroll well clear releasing theirs. Peak is roughly a
+megabyte, and everything is handed back in `onDestroy` rather than waiting for
+the activity to be collected.
+
+Verified: 31 browser assertions still pass; both APKs signature-verified across
+API 24–34; the permission list is still exactly six with no `QUERY_ALL_PACKAGES`;
+Lint zero errors. Still not launched on a device here — no KVM in this
+environment.
+
 ## v2.4.0 — pick what shows, and see what it costs
 
 **The memory floor is 45 MB.** The dial used to bottom out at 762 MB, which made
