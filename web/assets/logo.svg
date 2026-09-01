@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="dcp — Dynamic Camera Punch">
+  <title>dcp — Dynamic Camera Punch</title>
+  <defs>
+    <!-- Every gradient is in userSpaceOnUse: the letter stems are zero-width
+         paths, and an objectBoundingBox gradient on a zero-width box is
+         undefined — the stroke silently disappears. -->
+    <!-- Icon plate: deep navy in the top-left falling to violet in the bottom-right -->
+    <linearGradient id="plate" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="1024" y2="1024">
+      <stop offset="0"    stop-color="#2b2748"/>
+      <stop offset=".42"  stop-color="#312a5e"/>
+      <stop offset=".78"  stop-color="#5b2bb0"/>
+      <stop offset="1"    stop-color="#7f2fd6"/>
+    </linearGradient>
+    <!-- Cutout bezel ring: periwinkle → orchid, left to right -->
+    <linearGradient id="ring" gradientUnits="userSpaceOnUse" x1="292" y1="0" x2="732" y2="0">
+      <stop offset="0"   stop-color="#6b7cf6"/>
+      <stop offset=".55" stop-color="#9a72f4"/>
+      <stop offset="1"   stop-color="#c97cf0"/>
+    </linearGradient>
+    <radialGradient id="glass" cx=".36" cy=".3" r=".78">
+      <stop offset="0"   stop-color="#3b3f52"/>
+      <stop offset=".55" stop-color="#14161f"/>
+      <stop offset="1"   stop-color="#05060a"/>
+    </radialGradient>
+    <linearGradient id="wordD" gradientUnits="userSpaceOnUse" x1="0" y1="464" x2="0" y2="780">
+      <stop offset="0" stop-color="#8290ff"/><stop offset="1" stop-color="#5b6bf0"/>
+    </linearGradient>
+    <linearGradient id="wordP" gradientUnits="userSpaceOnUse" x1="0" y1="584" x2="0" y2="930">
+      <stop offset="0" stop-color="#d492f6"/><stop offset="1" stop-color="#ae67e6"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" rx="232" fill="url(#plate)"/>
+
+  <!-- ── The punch-hole, in its "expanded island" state ── -->
+  <rect x="292" y="253" width="440" height="184" rx="92" fill="#08080f"/>
+  <rect x="292" y="253" width="440" height="184" rx="92" fill="none" stroke="url(#ring)" stroke-width="15"/>
+
+  <!-- Camera lens -->
+  <circle cx="400" cy="345" r="59" fill="#17171f"/>
+  <circle cx="400" cy="345" r="45" fill="url(#glass)"/>
+  <circle cx="400" cy="345" r="45" fill="none" stroke="#2a2d3c" stroke-width="3"/>
+  <ellipse cx="384" cy="329" rx="13" ry="10" fill="#aab6f2" opacity=".55" transform="rotate(-32 384 329)"/>
+  <circle cx="416" cy="362" r="5" fill="#8e79f0" opacity=".5"/>
+
+  <!-- Status dot living inside the island, the way a live activity would -->
+  <circle cx="644" cy="345" r="24" fill="#a259f5"/>
+
+  <!-- ── "dcp" ── geometric letterforms drawn as strokes, so no font is needed -->
+  <g fill="none" stroke-width="40" stroke-linecap="butt">
+    <!-- d -->
+    <circle cx="292" cy="682" r="78" stroke="url(#wordD)"/>
+    <path d="M370 464V690" stroke="url(#wordD)"/>
+    <!-- c : ring with the right-hand terminal opened up -->
+    <path d="M561.7 618.1A78 78 0 1 0 561.7 745.9" stroke="#ffffff"/>
+    <!-- p -->
+    <circle cx="732" cy="682" r="78" stroke="url(#wordP)"/>
+    <path d="M654 674V930" stroke="url(#wordP)"/>
+  </g>
+</svg>

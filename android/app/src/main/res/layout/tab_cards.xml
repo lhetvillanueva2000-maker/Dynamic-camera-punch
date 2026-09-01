@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Tab one, and the front door of the app.
+
+  It is deliberately short. Everything it offers is a category that opens into
+  its own screen, so this page answers "what can this show" in one screenful
+  instead of asking for forty decisions before you have scrolled once. The rows
+  are built in code from Rows/SubScreen — see MainActivity#buildCardsTab — which
+  is why there is almost nothing here.
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/pane_cards"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:clipToPadding="false"
+    android:paddingStart="14dp"
+    android:paddingEnd="14dp"
+    android:paddingBottom="104dp"
+    android:scrollbars="none">
+
+    <LinearLayout
+        android:id="@+id/cards_body"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" />
+</ScrollView>

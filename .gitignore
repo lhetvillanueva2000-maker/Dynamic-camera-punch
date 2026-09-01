@@ -216,3 +216,27 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ── Dynamic Camera Punch ────────────────────────────────────────────────
+# Gradle / Android build output
+android/build/
+android/app/build/
+android/.gradle/
+android/local.properties
+android/captures/
+*.iml
+
+# The stock Python template above ignores build/ and dist/ wholesale; the
+# prebuilt APKs and the generated docs are deliverables, so let them back in.
+!dist/
+!dist/*.apk
+!docs/
+!docs/*.png
+!docs/*.gif
+
+# Scratch files from the capture tools
+tools/_*.html
+
+# Playwright, installed only to run tools/test-demo.js and tools/capture.js.
+# The demo itself has no dependencies.
+node_modules/

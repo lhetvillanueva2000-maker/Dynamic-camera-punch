@@ -1,0 +1,257 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Dynamic Camera Punch</string>
+    <string name="tagline">A Dynamic Island for your punch-hole, over every app.</string>
+
+    <string name="theme_title">Theme</string>
+    <string name="theme_on">Island is live over every app</string>
+    <string name="theme_off">Turn on to place the island over your home screen and apps</string>
+    <string name="turn_off">Turn off</string>
+
+    <string name="setup_title">Setup</string>
+    <string name="perm_overlay">Display over other apps</string>
+    <string name="perm_overlay_why">Required. This is what lets the island draw on top of everything else.</string>
+    <string name="perm_notifications">Notification access</string>
+    <string name="perm_notifications_why">Optional but recommended. Without it the island only reacts to charging, ringer and headphones.</string>
+    <string name="perm_post">Show notifications</string>
+    <string name="perm_post_why">Android requires an ongoing notification for a service that runs indefinitely.</string>
+    <string name="grant">Grant</string>
+    <string name="granted">Granted</string>
+
+    <string name="variant_title">Cutout shape</string>
+    <string name="variant_a">Variant A</string>
+    <string name="variant_a_desc">Fused to the top bezel</string>
+    <string name="variant_b">Variant B</string>
+    <string name="variant_b_desc">Floating, clear of the bezels</string>
+
+    <string name="ram_title">Memory</string>
+    <string name="ram_honest">The island needs about 30–45 MB and stays there. The ceiling is a limit, not a target: raising it does not make anything faster, and the app will not grow to fill it. Earlier versions allocated real memory to meet the number on the dial, which was waste — that is gone. The reserve for Android is never touched.</string>
+
+    <string name="demo_title">Live demonstration</string>
+    <string name="demo_open">Open demonstration</string>
+    <string name="demo_desc">The full sandbox: every alert and activity, both cutout shapes, driven by hand.</string>
+    <string name="demo_blocked">Unavailable while the theme is running. The demonstration is a separate WebView process worth roughly 80 MB, and running both at once wastes it.</string>
+
+    <string name="boot_title">Start on boot</string>
+    <string name="boot_desc">Bring the island back automatically after a restart.</string>
+
+    <string name="channel_theme">Theme running</string>
+    <string name="channel_theme_desc">Ongoing notice while the island overlay is active.</string>
+    <string name="notif_title">Dynamic Camera Punch</string>
+    <string name="notif_text">Island active · using %1$s</string>
+    <string name="ram_detail_fmt">%1$s in this device · %2$s reserved for Android · ceiling can go up to %3$s · using %4$s right now</string>
+
+    <string name="always_title">Keep the island on screen</string>
+    <string name="always_on">On — the island stays as a circle around your camera, even with nothing to show.</string>
+    <string name="always_off">Off — with nothing to show, the island collapses into your camera hole and the overlay is removed entirely.</string>
+
+    <string name="auto_title">Manage memory automatically</string>
+    <string name="auto_desc">Let the app keep its own footprint down and release cached artwork as it goes.</string>
+
+
+    <string name="src_messages">Messages</string>
+    <string name="src_media">Music and media</string>
+    <string name="src_calls">Calls</string>
+    <string name="src_timers">Timers and alarms</string>
+    <string name="src_navigation">Navigation</string>
+    <string name="src_progress">Downloads and progress</string>
+    <string name="src_other">Other notifications</string>
+    <string name="src_charging">Charging</string>
+    <string name="src_battery">Battery low</string>
+    <string name="src_ringer">Ringer changes</string>
+    <string name="src_headphones">Headphones</string>
+
+    <string name="apps_title">Apps</string>
+    <string name="apps_all">No apps picked, so every app shows. Tap + to choose only the apps you want on the island.</string>
+    <string name="add_plus">+  Add</string>
+    <string name="remove">Remove</string>
+
+    <string name="picker_apps_title">Add apps</string>
+    <string name="picker_apps_sub">Every app on this device with a launcher icon. Picking one lets its notifications reach the island.</string>
+    <string name="picker_functions_title">Add functions</string>
+    <string name="picker_functions_sub">Kinds of content the island knows how to show.</string>
+    <string name="picker_search">Search apps</string>
+    <string name="picker_add">Add</string>
+    <string name="picker_added">Added</string>
+    <string name="picker_done">Done</string>
+    <string name="picker_none">Nothing to list here.</string>
+
+    <string name="capacity_title">What this ceiling holds</string>
+    <string name="capacity_button_fmt">Capacity · %1$d notifs</string>
+    <string name="capacity_body_fmt">%1$s free above the island itself.\n\nApps on the list:  %2$s\nNotifications held with artwork:  %3$d\nPhone functions:  %4$d</string>
+    <string name="capacity_apps_uncounted">no practical limit</string>
+    <string name="capacity_note">The island shows at most two activities and one alert at a time whatever the ceiling says — that is a design limit, not a memory one. Raising the ceiling buys room to track more, not more on screen at once.</string>
+    <string name="capacity_tight">This ceiling is below what the island itself needs. Raise it on the gauge above.</string>
+
+    <string name="hide_title">Show only on the island</string>
+
+    <string name="made_by_named">Made by %1$s  (I hate pirating :) )</string>
+    <string name="made_by">Made by User (Elijah)  (I hate pirating :) )</string>
+    <string name="made_with" translatable="false">HTML5 • CSS3 • vanilla ES6+ • zero dependencies</string>
+
+    <!-- ── Tabs ───────────────────────────────────────────────────── -->
+
+    <!-- ── Gestures ───────────────────────────────────────────────── -->
+    <string name="gestures_desc">What each touch on the island does. Tap a row to change it.</string>
+    <string name="g_tap">Single tap</string>
+    <string name="g_double_tap">Double tap</string>
+    <string name="g_long_press">Long press</string>
+    <string name="g_swipe_left">Swipe left</string>
+    <string name="g_swipe_right">Swipe right</string>
+    <string name="ga_nothing">Nothing</string>
+    <string name="ga_open_app">Open the app</string>
+    <string name="ga_expand">Expand</string>
+    <string name="ga_collapse">Collapse</string>
+    <string name="ga_dismiss">Dismiss</string>
+    <string name="ga_swap">Swap cards</string>
+    <string name="ga_play_pause">Play / pause</string>
+    <string name="ga_next">Next track</string>
+    <string name="ga_previous">Previous track</string>
+
+    <!-- ── Look ───────────────────────────────────────────────────── -->
+    <string name="look_title">Island</string>
+    <string name="look_geometry">Size and position</string>
+    <string name="look_surface">Surface</string>
+    <string name="look_motion">Movement</string>
+
+    <string name="d_offset_x">Horizontal offset</string>
+    <string name="d_offset_y">Vertical offset</string>
+    <string name="d_idle_scale">Resting size</string>
+    <string name="d_corner_radius">Corner radius</string>
+    <string name="d_exp_radius">Expanded radius</string>
+    <string name="d_exp_width">Expanded width</string>
+    <string name="d_collapsed_alpha">Resting opacity</string>
+    <string name="d_border_width">Border width</string>
+    <string name="d_shadow_alpha">Shadow</string>
+    <string name="d_anim_speed">Animation speed</string>
+    <string name="d_bounce">Bounce</string>
+    <string name="d_auto_hide">Auto-hide delay</string>
+
+    <string name="bounce_0">None</string>
+    <string name="bounce_1">Normal</string>
+    <string name="bounce_2">High</string>
+    <string name="bounce_3">Highest</string>
+    <string name="autohide_never">Until opened</string>
+
+    <string name="reduce_anim_title">Reduce animations</string>
+    <string name="reduce_anim_desc">Snap between states instead of morphing. Helps on older devices.</string>
+    <string name="glow_title">Glow effect</string>
+    <string name="glow_desc">A soft halo around the island in the notification\'s own accent colour.</string>
+    <string name="notif_mode_0">Minimised</string>
+    <string name="notif_mode_1">Expanded</string>
+
+    <string name="colour_background">Background</string>
+    <string name="colour_outline">Outline</string>
+
+    <string name="presets_title">Presets</string>
+    <string name="presets_hint">Name this look</string>
+    <string name="presets_save">Save</string>
+    <string name="presets_none">No presets yet. Name one above and tap Save.</string>
+    <string name="presets_applied">Applied</string>
+    <string name="presets_saved">Saved</string>
+
+    <!-- ── Settings ───────────────────────────────────────────────── -->
+    <string name="name_title">Your name</string>
+    <string name="name_desc">Shown at the bottom of this app. Nothing is sent anywhere — the app has no internet permission at all.</string>
+    <string name="name_hint">Your name</string>
+
+    <string name="device_title">This device</string>
+    <string name="stat_ram">Memory</string>
+    <string name="stat_storage">Storage</string>
+    <string name="stat_cpu">Processor</string>
+    <string name="stat_cpu_own">This app\'s processor time</string>
+    <string name="stat_free">%1$s free</string>
+    <string name="stat_cores">%1$d cores · %2$s · %3$s</string>
+
+    <string name="support_title">Support</string>
+
+    <!-- ── v2.7.0: categories, and the screens behind them ─────────── -->
+    <string name="guide">Guide</string>
+    <string name="tagline_version">%1$s  ·  v%2$s</string>
+    <string name="reset">Reset</string>
+
+    <!-- ── v2.8.0: surface, content and media ─────────────────────── -->
+    <string name="blur_off">Off</string>
+    <string name="d_bg_opacity">Background opacity</string>
+    <string name="d_blur">Blur behind</string>
+    <string name="blur_note">Background opacity fades the island\'s surface — at 0 only the content is left, floating. Blur needs Android 12 or later, and the system switches all window blurs off in battery saver and when \"reduce transparency\" is on, so it may have no effect even above 0.</string>
+
+    <string name="look_content">Content</string>
+    <string name="d_text_scale">Text size</string>
+    <string name="d_art_size">Artwork size</string>
+    <string name="d_art_radius">Artwork corners</string>
+    <string name="d_button_size">Button size</string>
+
+    <string name="look_media">Media</string>
+    <string name="d_show_progress">Show the progress bar</string>
+    <string name="d_show_progress_desc">The played position of a track, under the title</string>
+    <string name="d_show_times">Show elapsed and remaining</string>
+    <string name="d_show_times_desc">1:16 on the left, -2:16 on the right</string>
+    <string name="d_progress_style">Progress style</string>
+    <string name="d_progress_style_desc">How the played part of the bar is drawn</string>
+    <string name="progress_plain">Plain bar</string>
+    <string name="progress_wavy">Wave</string>
+
+    <string name="look_feel">Feel</string>
+    <string name="d_haptics">Haptics</string>
+    <string name="d_haptics_desc">A short buzz when the island opens or is held</string>
+    <string name="refresh">Refresh</string>
+
+    <string name="look_sub">How it looks and how it moves. The preview above uses your current settings.</string>
+    <string name="presets_prompt">Saves every setting on this tab under one name. Saving over a name replaces it.</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="you_title">You</string>
+    <string name="behaviour_title">Island behaviour</string>
+    <string name="always_short">Keep the island as a circle around your camera even with nothing to show</string>
+    <string name="cpu_honest">The CPU figure is this app\'s own share of wall-clock time, not the system\'s. A live system-wide CPU percentage has not been readable by an ordinary app since /proc/stat was restricted in Android 8 — anything showing you one without root is a system app or is making it up.</string>
+    <string name="extras_title">More</string>
+    <string name="support_desc_short">A page inside the app. No internet connection is involved.</string>
+    <string name="about_title">About</string>
+    <string name="about_desc">Version %1$s</string>
+    <string name="about_body">Dynamic Camera Punch is a system overlay that turns your punch-hole camera into a live island.\n\nIt contains no third-party libraries at all — no AndroidX, no Kotlin runtime, nothing. Every control in this app is drawn on a Canvas, which is why the whole thing fits in a couple of hundred kilobytes.\n\nSix permissions, every one used. No QUERY_ALL_PACKAGES. No INTERNET — this app has never made a network request and cannot.\n\nMIT licensed. Not affiliated with or endorsed by Apple.</string>
+
+    <string name="cat_events">System events</string>
+    <string name="guide_events">Short, one-off things your phone does that the island can announce as it happens — plugging in, running low, switching to vibrate, connecting headphones.\n\nThese four need no permission at all. They work on a fresh install with nothing granted beyond the overlay itself, because Android broadcasts them to any app that asks to listen.</string>
+    <string name="events_note">These work with no notification access. They are broadcast by the system, not read from your notifications.</string>
+
+    <string name="cat_cards">Live cards</string>
+    <string name="guide_cards">Things that stay on the island while they are happening, rather than appearing and vanishing — a track playing, a call ringing, a timer counting down, a route step, a download filling up.\n\nAll of these are read from notifications, so they need notification access. Without it the island still works; it just has less to say.</string>
+    <string name="cards_note">Read from your notifications, so these need notification access. Turn one off and it stops reaching the island entirely.</string>
+
+    <string name="cat_gestures">Gestures</string>
+    <string name="guide_gestures">What each touch on the island does. Every gesture can be set to anything, or to nothing.\n\nDouble tap is set to Nothing by default on purpose: with nothing bound to it, a single tap can act the moment you lift your finger. Bind it and every single tap has to wait ~300 ms to find out whether a second one is coming.</string>
+    <string name="gestures_stored_note">Assignments are stored by name, not by position in this list, so a future version adding an action cannot silently change what your gestures do.</string>
+
+    <string name="cat_notifications">Notifications</string>
+    <string name="cat_notifications_desc">Choose which apps reach the island, and how their notifications behave when they get there</string>
+    <string name="guide_notifications">Which apps are allowed to put something on the island, and what happens when they do.\n\nWith no apps picked, every app is allowed — an empty list would otherwise mean an island that never appears, which reads as broken. Add your first app and the list becomes a filter.</string>
+    <string name="notif_settings">Notification settings</string>
+    <string name="notif_mode_title">Notification mode</string>
+    <string name="notif_mode_desc">Whether an arriving notification opens itself or waits to be tapped</string>
+    <string name="auto_hide_desc">How long an alert stays up before it collapses on its own</string>
+    <string name="auto_hide_never">Until opened</string>
+    <string name="auto_hide_seconds">%1$d seconds</string>
+    <string name="hide_short">Clear a notification from the shade once the island has shown it</string>
+    <string name="hide_limits">Two limits worth knowing: the brief banner at the top of the screen still appears, because the system has already posted the notification before any app is told about it — no app can suppress that. And clearing is the same as swiping it away, so the island becomes the only place that notification was ever shown. Ongoing notifications are never touched.</string>
+
+    <!-- Row subtitles: what each kind of content actually is -->
+    <string name="src_messages_desc">The conversation and what was actually said, with the sender\'s avatar</string>
+    <string name="src_media_desc">The track that is playing, with play, pause and skip</string>
+    <string name="src_calls_desc">Who is calling, from the dialer\'s own notification</string>
+    <string name="src_timers_desc">Live countdown from your clock app</string>
+    <string name="src_navigation_desc">Turn-by-turn from your maps app</string>
+    <string name="src_progress_desc">Downloads, installs and anything else reporting progress</string>
+    <string name="src_other_desc">Anything else that posts a notification</string>
+    <string name="src_charging_desc">Bolt and battery level the moment you plug in</string>
+    <string name="src_battery_desc">Level and warning when the battery gets low</string>
+    <string name="src_ringer_desc">Silent, vibrate and ring changes</string>
+    <string name="src_headphones_desc">Connecting and disconnecting</string>
+
+    <!-- Gesture subtitles -->
+    <string name="g_tap_hint">A single touch on the island</string>
+    <string name="g_double_tap_hint">Two touches in quick succession — adds a short delay to every single tap</string>
+    <string name="g_long_press_hint">Press and hold</string>
+    <string name="g_swipe_left_hint">Drag left across the island</string>
+    <string name="g_swipe_right_hint">Drag right across the island</string>
+</resources>

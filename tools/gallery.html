@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dynamic Camera Punch — state gallery</title>
+<link rel="icon" href="../web/assets/logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../web/css/theme.css">
+<link rel="stylesheet" href="../web/css/phone.css">
+<link rel="stylesheet" href="../web/css/island.css">
+<style>
+/* ---------------------------------------------------------------------------
+   A contact sheet of island states. Each tile is a real, live island — the
+   phone frame is simply clipped to its top so a whole matrix of presentations
+   fits in one screenshot. Used to produce docs/*.png.
+   Query flags:  ?variant=a|b   ?expanded=1   ?scale=1.4
+   --------------------------------------------------------------------------- */
+body { padding: 26px; background: var(--bg); }
+
+h1 { font-size: 19px; font-weight: 650; letter-spacing: -.015em; display: flex; align-items: center; gap: 11px; }
+h1 img { width: 32px; height: 32px; border-radius: 8px; }
+.lede { color: var(--text-dim); font-size: 13px; margin: 6px 0 22px 43px; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 18px; }
+
+.tile {
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  overflow: hidden;
+}
+.tile__crop {
+  position: relative;
+  height: var(--crop, 150px);
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+}
+/* Clip the frame to its top edge and pin it, so the island is the subject. */
+.tile__crop .phone { --phone-w: 340px; --phone-h: 640px; margin-top: 14px; }
+.tile__crop .phone__frame { box-shadow: 0 0 0 1.5px rgba(255,255,255,.1) inset, 0 2px 3px rgba(255,255,255,.16) inset; }
+.tile__crop .phone__label { display: none; }
+.tile__cap {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 11px 14px 13px;
+  border-top: 1px solid var(--line-soft);
+  font-size: 12.5px;
+}
+.tile__cap b { font-weight: 600; }
+.tile__cap span { color: var(--text-faint); font-size: 11.5px; margin-left: auto; }
+.tile[data-kind="alert"]    .tile__cap b { color: var(--orange); }
+.tile[data-kind="activity"] .tile__cap b { color: var(--green); }
+.tile[data-kind="idle"]     .tile__cap b { color: var(--text-dim); }
+</style>
+</head>
+<body>
+
+<svg class="svg-defs" aria-hidden="true">
+  <defs>
+    <filter id="di-goo" x="-30%" y="-60%" width="160%" height="220%" color-interpolation-filters="sRGB">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="7" result="blur"/>
+      <feColorMatrix in="blur" type="matrix"
+        values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 26 -12"/>
+    </filter>
+  </defs>
+</svg>
+
+<h1><img src="../web/assets/logo.svg" alt=""> <span id="title">Dynamic Camera Punch</span></h1>
+<p class="lede" id="lede"></p>
+<div class="grid" id="grid"></div>
+
+<script src="../web/js/icons.js"></script>
+<script src="../web/js/spring.js"></script>
+<script src="../web/js/phone.js"></script>
+<script src="../web/js/registry.js"></script>
+<script src="../web/js/island.js"></script>
+<script>
+(function () {
+  'use strict';
+  var q = new URLSearchParams(location.search);
+  var variant  = q.get('variant') === 'b' ? 'b' : 'a';
+  var expanded = q.get('expanded') === '1';
+  var only     = q.get('only');                  // comma-separated ids
+
+  document.getElementById('title').textContent =
+    'Variant ' + variant.toUpperCase() + ' — ' +
+    (variant === 'a' ? 'punch-hole fused to the bezel' : 'free-floating punch-hole') +
+    (expanded ? ' · expanded' : ' · compact');
+  document.getElementById('lede').textContent = expanded
+    ? 'Touch and hold expands the pill into the detail view. Every tile below is a live island, not a mock-up.'
+    : 'The idle cutout plus every alert and live activity in its compact presentation.';
+
+  var specs = [{ id: null, label: 'Idle', kind: 'idle', note: 'camera only' }];
+  DI.Registry.alerts.forEach(function (d) { specs.push({ id: d.id, label: d.label, kind: 'alert', note: (d.duration / 1000).toFixed(1) + ' s' }); });
+  DI.Registry.activities.forEach(function (d) { specs.push({ id: d.id, label: d.label, kind: 'activity', note: 'persistent' }); });
+  if (only) {
+    var keep = only.split(',');
+    specs = specs.filter(function (s) { return keep.indexOf(String(s.id)) >= 0; });
+  }
+
+  var grid = document.getElementById('grid');
+
+  specs.forEach(function (spec) {
+    var tile = document.createElement('div');
+    tile.className = 'tile';
+    tile.setAttribute('data-kind', spec.kind);
+    tile.innerHTML = '<div class="tile__crop"></div>' +
+      '<div class="tile__cap"><b>' + spec.label + '</b><span>' + spec.note + '</span></div>';
+    grid.appendChild(tile);
+
+    var crop = tile.querySelector('.tile__crop');
+    var island = new DI.Island(DI.Phone.create(variant, crop, { label: false }),
+                               { holdAlerts: true });
+    if (spec.id) {
+      island.present(spec.id);
+      if (expanded) island.expand();
+      // The morph animates and some presentations change phase, so keep
+      // re-measuring for a couple of seconds rather than sampling once.
+      var n = 0;
+      var grow = setInterval(function () {
+        crop.style.setProperty('--crop', Math.max(150, island.el.offsetHeight + 66) + 'px');
+        if (++n > 8) clearInterval(grow);
+      }, 260);
+    }
+  });
+})();
+</script>
+</body>
+</html>

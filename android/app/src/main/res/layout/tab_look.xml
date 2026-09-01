@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Tab two: how the island looks and moves.
+
+  Built in code from the same Rows vocabulary as the other two tabs — see
+  MainActivity#buildLookTab. The live preview and the sliders are custom views
+  that get added to it there.
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/pane_look"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:clipToPadding="false"
+    android:paddingStart="14dp"
+    android:paddingEnd="14dp"
+    android:paddingBottom="104dp"
+    android:scrollbars="none">
+
+    <LinearLayout
+        android:id="@+id/look_body"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical" />
+</ScrollView>

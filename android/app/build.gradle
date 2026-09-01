@@ -1,0 +1,122 @@
+import javax.inject.Inject
+
+plugins {
+    id 'com.android.application'
+}
+
+// Single source of truth for the version. Feeds versionName, the APK file
+// names, and the string BuildConfig hands to the control panel — so what is on
+// screen, what is in Settings and what is on disk can never disagree.
+def appVersion = '2.8.0'
+def appVersionCode = 12
+
+/*
+ * The web app in ../../web is the single source of truth; this task mirrors it
+ * into the APK's asset tree on every build so the demo and the APK can never
+ * drift apart.
+ *
+ * It is a real typed task with an @OutputDirectory rather than a plain Sync
+ * wired through sourceSets.assets.srcDirs. Asset srcDirs are inert paths as far
+ * as AGP is concerned — they carry no task dependency — so a `clean` build
+ * would happily package an empty assets/ and the app would open a blank
+ * WebView. Registering through the variant API is what makes it a real
+ * producer/consumer edge.
+ */
+abstract class SyncWebAssets extends DefaultTask {
+
+    @InputDirectory
+    abstract DirectoryProperty getWebRoot()
+
+    @OutputDirectory
+    abstract DirectoryProperty getOutputDir()
+
+    @Inject
+    abstract FileSystemOperations getFileOps()
+
+    @TaskAction
+    void copyWeb() {
+        def dest = outputDir.dir('web')     // → file:///android_asset/web/dynamic-camera-punch-v2.8.0.html
+        fileOps.sync {
+            from webRoot
+            into dest
+            exclude '**/.DS_Store', '**/_*.html'
+        }
+    }
+}
+
+def syncWebAssets = tasks.register('syncWebAssets', SyncWebAssets) {
+    group = 'build'
+    description = 'Mirrors the web demo into the APK asset tree.'
+    webRoot.set(rootProject.layout.projectDirectory.dir('../web'))
+}
+
+android {
+    namespace 'com.dcp.punch'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.dcp.punch"
+        minSdk 24
+        targetSdk 34
+        versionCode appVersionCode
+        versionName appVersion
+        resourceConfigurations += ['en']
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    // Produces dcp-v2.8.0-release.apk / dcp-v2.8.0-debug.apk instead of the
+    // default app-release.apk, so a downloaded file names its own version.
+    base {
+        archivesName = "dcp-v${appVersion}"
+    }
+
+    signingConfigs {
+        release {
+            // Populated from keystore.properties when present; the build falls
+            // back to the debug key so `assembleRelease` always produces an
+            // installable APK.
+            def props = new Properties()
+            def f = rootProject.file('keystore.properties')
+            if (f.exists()) {
+                f.withInputStream { props.load(it) }
+                storeFile rootProject.file(props.getProperty('storeFile'))
+                storePassword props.getProperty('storePassword')
+                keyAlias props.getProperty('keyAlias')
+                keyPassword props.getProperty('keyPassword')
+            }
+        }
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix '.debug'
+            versionNameSuffix '-debug'
+        }
+        release {
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig rootProject.file('keystore.properties').exists()
+                    ? signingConfigs.release
+                    : signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    packagingOptions {
+        resources.excludes += ['META-INF/*.version', 'DebugProbesKt.bin']
+    }
+}
+
+androidComponents {
+    onVariants(selector().all()) { variant ->
+        variant.sources.assets.addGeneratedSourceDirectory(syncWebAssets) { it.outputDir }
+    }
+}

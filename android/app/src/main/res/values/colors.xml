@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Two palettes live in this app and they are not the same thing.
+
+      The ISLAND is black with white content, because it is pretending to be a
+      hole in your screen and a hole is not tinted. Those colours are in the
+      overlay code and the web build's tokens.
+
+      The CONTROL PANEL, below, is a normal dark UI. It got a periwinkle accent
+      and a warmer set of greys in v2.7.0: the old palette was near-black with a
+      hard iOS blue, which made every card edge disappear and every accent
+      shout. Cards now sit a clear step above the background so a list reads as
+      a list, and the accent is quiet enough to use on a whole screen of section
+      headers without it becoming the loudest thing on the page.
+    -->
+
+    <!-- Surfaces -->
+    <color name="app_background">#FF101117</color>
+    <color name="card">#FF191B22</color>
+    <color name="card_elev">#FF23252D</color>
+    <color name="line">#FF34373F</color>
+    <color name="ripple">#22FFFFFF</color>
+
+    <!-- Type -->
+    <color name="text">#FFF2F3F7</color>
+    <color name="text_dim">#FFA9ADB8</color>
+    <color name="text_faint">#FF70747F</color>
+
+    <!-- Accent: periwinkle, and the section-header tint drawn from it. -->
+    <color name="accent">#FF9DB6FF</color>
+    <color name="accent_dim">#33566EB8</color>
+    <color name="section">#FFA8C0FF</color>
+
+    <!-- Status -->
+    <color name="green">#FF6FDD8B</color>
+    <color name="orange">#FFFFB86C</color>
+    <color name="red">#FFFF7B72</color>
+
+    <!-- The floating tab bar -->
+    <color name="tabbar">#FF2A2D36</color>
+    <color name="tabbar_selected">#FFAFC4FF</color>
+    <color name="tabbar_icon_on">#FF17203C</color>
+    <color name="tabbar_icon_off">#FF9BA0AC</color>
+    <color name="tabbar_shadow">#73000000</color>
+
+    <!-- The tick/cross switch -->
+    <color name="switch_on_track">#FFB9C8F7</color>
+    <color name="switch_on_thumb">#FF1F3D7A</color>
+    <color name="switch_on_mark">#FFDCE5FF</color>
+    <color name="switch_off_track">#FF43464F</color>
+    <color name="switch_off_thumb">#FF9BA0AC</color>
+    <color name="switch_off_mark">#FF2A2D36</color>
+
+    <!-- Row badge families: kind, never state. -->
+    <color name="tint_blue_bg">#FFCBD9FF</color>
+    <color name="tint_blue_fg">#FF1B2E5C</color>
+    <color name="tint_pink_bg">#FFF7C9E6</color>
+    <color name="tint_pink_fg">#FF54173C</color>
+    <color name="tint_plain_bg">#FF2E313A</color>
+    <color name="tint_plain_fg">#FFC7CBD6</color>
+</resources>

@@ -1,0 +1,320 @@
+/* ============================================================================
+   phone.css — the device frame, wallpaper, status bar and home screen that
+   sits underneath the island.
+   ========================================================================== */
+
+.phone {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  flex: 0 0 auto;
+}
+
+.phone__label {
+  order: 2;
+  font-size: 12.5px;
+  letter-spacing: .01em;
+  color: var(--text-dim);
+  text-align: center;
+  max-width: calc(var(--phone-w) * var(--phone-scale, 1));
+}
+.phone__label b { color: var(--text); font-weight: 600; }
+
+/* The stage is the box the page lays out; the frame is scaled inside it.
+   Keeping the two separate is what lets the phone shrink on a narrow screen
+   without ever changing its proportions or clipping its own home screen. */
+.phone__stage {
+  flex: 0 0 auto;
+  width: calc(var(--phone-w) * var(--phone-scale, 1));
+  height: calc(var(--phone-h) * var(--phone-scale, 1));
+}
+
+/* ── Titanium frame ─────────────────────────────────────────────────── */
+.phone__frame {
+  position: relative;
+  width: var(--phone-w);
+  height: var(--phone-h);
+  transform: scale(var(--phone-scale, 1));
+  transform-origin: top left;
+  padding: 11px;
+  border-radius: 58px;
+  background:
+    linear-gradient(150deg, #5d5d63 0%, #2a2a2e 18%, #414147 42%,
+                            #1d1d21 62%, #4a4a51 84%, #262629 100%);
+  box-shadow:
+    0 0 0 1.5px rgba(255, 255, 255, .10) inset,
+    0 2px 3px rgba(255, 255, 255, .16) inset,
+    0 40px 80px -20px rgba(0, 0, 0, .75),
+    0 8px 26px rgba(0, 0, 0, .45);
+  flex: 0 0 auto;
+}
+
+/* Side buttons */
+.phone__btn {
+  position: absolute;
+  background: linear-gradient(180deg, #4c4c53, #2b2b30);
+  border-radius: 2px;
+}
+.phone__btn--silent { left: -2px; top: 132px; width: 3px; height: 30px; }
+.phone__btn--up     { left: -2.5px; top: 186px; width: 3.5px; height: 58px; }
+.phone__btn--down   { left: -2.5px; top: 258px; width: 3.5px; height: 58px; }
+.phone__btn--power  { right: -2.5px; top: 214px; width: 3.5px; height: 92px; }
+
+/* ── Screen ─────────────────────────────────────────────────────────── */
+.phone__screen {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 47px;
+  overflow: hidden;
+  background: #000;
+  isolation: isolate;         /* keeps island z-indexes local to the screen */
+  display: flex;
+  flex-direction: column;
+}
+
+.wallpaper {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(120% 80% at 18% 0%,   #2b1f5e 0%, transparent 55%),
+    radial-gradient(90%  70% at 92% 12%,  #7a2350 0%, transparent 52%),
+    radial-gradient(120% 90% at 50% 108%, #0b3f52 0%, transparent 60%),
+    linear-gradient(168deg, #12101f 0%, #06060b 55%, #0a0713 100%);
+}
+/* Subtle film grain so the flat gradients don't band on OLED-ish darks. */
+.wallpaper::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: .16;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/></filter><rect width='120' height='120' filter='url(%23n)' opacity='.5'/></svg>");
+}
+
+/* ── Status bar ─────────────────────────────────────────────────────── */
+.statusbar {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  height: 54px;
+  padding: 0 30px 0 32px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: .01em;
+  color: #fff;
+  flex: 0 0 auto;
+}
+.statusbar__time { min-width: 54px; }
+
+/* Reserved dead-zone under the idle cutout so the glyphs never collide with
+   it. Width is written by island.js from the active variant's geometry. */
+.statusbar__reserve { flex: 1 1 auto; }
+.phone[data-variant="a"] .statusbar__reserve { min-width: calc(var(--cut-a-w) + 26px); }
+.phone[data-variant="b"] .statusbar__reserve { min-width: calc(var(--cut-b-w) + 26px); }
+
+.statusbar__glyphs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+.statusbar__glyphs svg { display: block; }
+
+/* Variant A welds the cutout to the bezel, so the whole bar drops below it. */
+.phone[data-variant="a"] .statusbar { height: 58px; align-items: flex-end; padding-bottom: 7px; }
+
+/* ── Home screen content ────────────────────────────────────────────── */
+.screen-content {
+  position: relative;
+  z-index: 1;               /* strictly under the island (z-index 30) */
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  padding: 12px 22px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.screen-content::-webkit-scrollbar { display: none; }
+
+.widget {
+  border-radius: 22px;
+  padding: 16px 18px;
+  background: linear-gradient(160deg, rgba(120, 150, 255, .26), rgba(255, 255, 255, .06));
+  backdrop-filter: blur(18px) saturate(150%);
+  -webkit-backdrop-filter: blur(18px) saturate(150%);
+  border: 1px solid rgba(255, 255, 255, .12);
+  color: #fff;
+}
+.widget__head { display: flex; align-items: baseline; justify-content: space-between; }
+.widget__title { font-size: 15px; font-weight: 600; }
+.widget__temp  { font-size: 30px; font-weight: 300; letter-spacing: -.02em; }
+.widget__sub   { font-size: 12px; opacity: .72; margin-top: 2px; }
+.widget__bars  { display: flex; gap: 6px; margin-top: 14px; height: 34px; align-items: flex-end; }
+.widget__bars i {
+  flex: 1;
+  border-radius: 3px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .85), rgba(255, 255, 255, .28));
+}
+
+.app-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px 14px;
+}
+.app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.app__icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 15px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  box-shadow: 0 5px 14px rgba(0, 0, 0, .35), 0 0 0 .5px rgba(255, 255, 255, .12) inset;
+  transition: transform .25s var(--ease-spring);
+}
+.app:active .app__icon { transform: scale(.9); }
+.app__icon svg { width: 30px; height: 30px; }
+.app__name { font-size: 10.5px; color: rgba(255, 255, 255, .9); letter-spacing: .01em; }
+
+.dock {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  margin: 0 12px 26px;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  border-radius: 30px;
+  background: rgba(255, 255, 255, .10);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, .10);
+}
+.dock .app__name { display: none; }
+
+.homebar {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  bottom: 9px;
+  width: 136px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, .9);
+  transform: translateX(-50%);
+}
+
+/* ── The app a home-screen icon opens into ──────────────────────────── */
+/* Above the home screen and dock (z-index 1), below the status bar (4), the
+   home bar (5) and the island (30). An open app must not swallow the clock and
+   battery — a real phone keeps them on top — and the island has to keep working
+   over it exactly as it does over anything else. */
+.app-window {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 47px;
+  background: linear-gradient(180deg, #16161c 0%, #0a0a0e 100%);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  will-change: transform, opacity;
+  /* Same morph curve as the island, so a launch and a pill feel related.
+     Visibility is toggled by .is-open alone rather than transitioned: the class
+     is held for the whole shrink and dropped once it has finished, so adding a
+     delay here as well would stack on top of that and leave the window sitting
+     visible for a second after it had visually gone. */
+  transition:
+    transform     .52s var(--ease-island),
+    border-radius .52s var(--ease-island),
+    opacity       .30s ease;
+}
+.app-window.is-open {
+  visibility: visible;
+  pointer-events: auto;
+}
+
+/* The home screen recedes behind the opening app, the way iOS does it. */
+.screen-content,
+.dock { transition: transform .52s var(--ease-island), opacity .52s var(--ease-island); }
+.phone.has-app-open .screen-content,
+.phone.has-app-open .dock { transform: scale(.94); opacity: .35; }
+
+.app-window__chrome {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 62px 26px 14px;
+}
+.app-window__icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 0 .5px rgba(255, 255, 255, .14) inset;
+}
+.app-window__icon svg { width: 17px; height: 17px; }
+.app-window__title { font-size: 17px; font-weight: 650; color: #fff; letter-spacing: -.01em; }
+
+.app-window__body { flex: 1 1 auto; padding: 6px 26px; overflow: hidden; }
+.app-window__hero {
+  height: 128px;
+  border-radius: 18px;
+  opacity: .9;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, .45);
+}
+.app-window__rows { display: flex; flex-direction: column; gap: 13px; margin-top: 22px; }
+.app-window__rows i {
+  height: 11px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, .13);
+}
+
+.app-window__hint {
+  flex: 0 0 auto;
+  padding: 0 26px 34px;
+  text-align: center;
+  font-size: 11px;
+  color: rgba(255, 255, 255, .42);
+}
+
+.homebar { cursor: pointer; }
+.app[data-app] { cursor: pointer; }
+
+@media (prefers-reduced-motion: reduce) {
+  .app-window,
+  .screen-content,
+  .dock { transition-duration: .01ms; }
+}
+
+/* ── Touch ownership ────────────────────────────────────────────────── */
+/* A drag that starts inside the phone belongs to the phone, not to the page.
+   Without this, swiping the device frame scrolls the document underneath it and
+   the gestures below never get a chance to run. The home screen opts back in to
+   vertical panning so its own app grid still scrolls, and overscroll-behavior
+   stops that scroll chaining out to the page when it hits an end. */
+.phone__screen { touch-action: none; }
+.screen-content { touch-action: pan-y; overscroll-behavior: contain; }
+
+/* Feedback while an edge or bottom swipe is being dragged. */
+.app-window.is-dismissing {
+  transition: transform .18s var(--ease-out), opacity .18s var(--ease-out);
+}

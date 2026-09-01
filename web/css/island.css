@@ -1,0 +1,586 @@
+/* ============================================================================
+   island.css — the Dynamic Island itself.
+
+   GEOMETRY MODEL
+   --------------
+   The island is *content driven*: island.js measures the rendered content and
+   writes `width` / `height` back onto the element in px. Every state change is
+   therefore a plain CSS transition between two numeric values, which is what
+   lets one easing curve carry the whole morph.
+
+   The camera never moves. `--island-top` is a per-variant constant (0 for the
+   bezel-welded variant A, 11px for the floating variant B) and the lens sits at
+   a fixed offset inside the island, so the hole stays nailed to the physical
+   sensor no matter what the island is doing.
+   ========================================================================== */
+
+.island-root {
+  position: absolute;
+  z-index: 30;                 /* above .screen-content (1) and .statusbar (4) */
+  top: 0; left: 0; right: 0;
+  pointer-events: none;
+}
+
+.island-layer {
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  padding-top: var(--island-top);
+  display: flex;
+  justify-content: center;
+  align-items: center;         /* keeps the satellite optically centred */
+  /* --drag is written by the spring in island.js while a swipe is in flight.
+     Both layers read the same variable so blobs and surface never separate. */
+  transform: translate3d(var(--drag, 0px), 0, 0);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* The gooey layer carries no content — only two black shapes whose blurred
+   alpha is re-hardened by #di-goo, which fuses them with a liquid bridge. */
+.island-layer--blobs { filter: url(#di-goo); }
+
+.blob {
+  background: var(--island-bg);
+  transition:
+    width  var(--dur-morph) var(--ease-island),
+    height var(--dur-morph) var(--ease-island),
+    border-radius var(--dur-morph) var(--ease-island),
+    transform var(--dur-morph) var(--ease-island),
+    opacity 220ms linear;
+}
+
+/* ── The visible island ─────────────────────────────────────────────── */
+.island {
+  position: relative;
+  background: var(--island-bg);
+  box-shadow: var(--island-shadow), 0 0 0 .5px var(--island-ring) inset;
+  pointer-events: auto;
+  cursor: pointer;
+  overflow: hidden;
+  transition:
+    width  var(--dur-morph) var(--ease-island),
+    height var(--dur-morph) var(--ease-island),
+    border-radius var(--dur-morph) var(--ease-island),
+    transform 420ms var(--ease-out);
+  will-change: width, height;
+}
+
+/* Finger-down feedback. Scaling *down* on press and letting the spring curve
+   carry it back is what makes the surface feel physical. */
+.island.is-pressed  { transform: scale(.965); transition: transform 140ms var(--ease-out); }
+.island.is-holding  { transform: scale(1.035); transition: transform 320ms var(--ease-spring); }
+
+/* Faint top-edge sheen — a real OLED cutout catches a little light. */
+.island__specular {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .06), transparent 34%);
+}
+
+/* ── Camera lens ────────────────────────────────────────────────────── */
+.island__lens {
+  position: absolute;
+  left: 50%;
+  top: var(--lens-top, 9px);
+  width: 12px; height: 12px;
+  margin-left: -6px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #2c2f3a 0%, #0d0e12 58%, #000 100%);
+  box-shadow: 0 0 0 .75px rgba(255, 255, 255, .10), 0 0 5px rgba(60, 90, 190, .30) inset;
+  pointer-events: none;
+  z-index: 2;
+}
+.island__lens i {
+  position: absolute;
+  left: 2.5px; top: 2.2px;
+  width: 3.4px; height: 3.4px;
+  border-radius: 50%;
+  background: rgba(150, 180, 255, .38);
+  filter: blur(.4px);
+}
+/* Privacy indicator: the lens itself glows when camera/mic are live. */
+.island[data-privacy="camera"] .island__lens { box-shadow: 0 0 0 1.5px var(--green), 0 0 7px rgba(48, 209, 88, .7); }
+.island[data-privacy="mic"]    .island__lens { box-shadow: 0 0 0 1.5px var(--orange), 0 0 7px rgba(255, 159, 10, .7); }
+
+/* ── Content plate ──────────────────────────────────────────────────── */
+.island__content {
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: max-content;          /* natural width → island.js measures this */
+  color: #fff;
+  transition: opacity 170ms linear, transform 240ms var(--ease-out);
+  z-index: 1;
+}
+/* Crossfade between two presentations */
+.island__content.is-out {
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(.86);
+}
+
+/* Expanded content is top-aligned instead of centred so the first row always
+   clears the camera lens parked at the top of the box. */
+.island__content.is-expanded-plate {
+  top: 30px;
+  transform: translate(-50%, 0);
+}
+.island__content.is-expanded-plate.is-out {
+  transform: translate(-50%, 0) scale(.94);
+}
+
+/* ── Satellite (the "minimal" indicator for a 2nd activity) ──────────
+   Absolutely positioned rather than a flex sibling. If it shared the row,
+   centring the pair would drag the pill sideways — and the pill carries the
+   camera lens, so the hole would appear to slide across the bezel. Anchoring
+   the satellite to the pill's right edge (--island-w, written by island.js)
+   keeps the sensor nailed to the middle of the screen forever. */
+.island-sat,
+.blob--sat {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--island-top) + (var(--island-h, 37px) - var(--sat-size)) / 2);
+  width: var(--sat-size);
+  height: var(--sat-size);
+  border-radius: 50%;
+  background: var(--island-bg);
+  transform-origin: left center;
+  transform: translateX(calc(var(--island-w, 0px) / 2 + var(--sat-gap)))
+             scale(var(--sat-scale, .1));
+  opacity: 0;
+  transition:
+    transform var(--dur-morph) var(--ease-island),
+    top var(--dur-morph) var(--ease-island),
+    opacity 200ms linear;
+}
+.island-sat {
+  overflow: hidden;
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+  color: #fff;
+}
+.island-root.has-satellite { --sat-scale: 1; }
+.island-root.has-satellite .island-sat,
+.island-root.has-satellite .blob--sat { opacity: 1; }
+.island-root.has-satellite .island-sat { pointer-events: auto; cursor: pointer; }
+.island-sat__inner { display: grid; place-items: center; }
+.island-sat__inner svg { width: 15px; height: 15px; }
+
+/* ── Variants ───────────────────────────────────────────────────────── */
+/* A — welded to the bezel: square shoulders, rounded chin.
+   The lens offset is the physical sensor position: idle height 27 → centre
+   13.5 → 7.5px from the island's own top edge, and it never moves again. */
+.phone[data-variant="a"] .island-root { --island-top: 0px; }
+.phone[data-variant="a"] .island { --lens-top: 7.5px; }
+.phone[data-variant="b"] .island { --lens-top: 9px; }
+.phone[data-variant="a"] .island,
+.phone[data-variant="a"] .blob--main { border-top-left-radius: 0; border-top-right-radius: 0; }
+/* The satellite is a cutout too, so it hangs off the same bezel. */
+.phone[data-variant="a"] .island-sat,
+.phone[data-variant="a"] .blob--sat {
+  top: var(--island-top);
+  height: calc(var(--sat-size) - 4px);
+  border-radius: 0 0 13px 13px;
+}
+
+/* B — free-floating lens: fully rounded in every state. */
+.phone[data-variant="b"] .island-root { --island-top: 11px; }
+
+/* ── Expanded state ─────────────────────────────────────────────────── */
+.island.is-expanded { cursor: default; }
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  background: rgba(0, 0, 0, .42);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 360ms var(--ease-out);
+}
+.phone__screen.is-expanded .scrim { opacity: 1; pointer-events: auto; }
+
+/* ══════════════════════════════════════════════════════════════════════
+   CONTENT COMPONENTS
+   Shared vocabulary used by every alert and activity in registry.js.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Compact row: leading · camera gap · trailing.
+   Everything can shrink except the camera gap: when a long label would push
+   the pill past the screen edge, island.js caps the width and the text
+   ellipsises inside it rather than being sliced in half. */
+.di-compact {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  min-height: 24px;
+  /* No percentage max-width here: the plate above is `width: max-content`, and
+     a percentage against an indefinite container makes intrinsic measurement
+     collapse. island.js caps the slots in px instead. */
+}
+.di-compact__lead,
+.di-compact__trail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  min-width: 0;
+  min-height: 22px;
+  overflow: hidden;
+}
+/* Slots are widened to matching sizes by island.js; the items themselves hug
+   the outer edges of the pill, the way iOS lays out the compact state. */
+.di-compact__lead  { justify-content: flex-start; }
+.di-compact__trail { justify-content: flex-end; }
+.di-compact__gap { width: var(--di-gap); flex: 0 0 auto; }
+
+/* Icon chips */
+.di-ico {
+  display: grid;
+  place-items: center;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--c, var(--accent));
+  color: #fff;
+  flex: 0 0 auto;
+}
+.di-ico svg { width: 13px; height: 13px; }
+.di-ico--plain { background: transparent; color: var(--c, #fff); }
+.di-ico--lg { width: 34px; height: 34px; }
+.di-ico--lg svg { width: 19px; height: 19px; }
+
+.di-text {
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: .005em;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.di-text--dim { color: rgba(255, 255, 255, .58); font-weight: 500; }
+.di-text--accent { color: var(--c, var(--accent)); }
+.di-num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+
+/* Album / avatar art */
+.di-art {
+  width: 24px; height: 24px;
+  border-radius: 7px;
+  background: var(--c, #444);
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  overflow: hidden;
+  box-shadow: 0 0 0 .5px rgba(255, 255, 255, .14) inset;
+}
+.di-art svg { width: 13px; height: 13px; opacity: .95; }
+.di-art--lg { width: 52px; height: 52px; border-radius: 13px; }
+.di-art--lg svg { width: 26px; height: 26px; }
+
+/* Equaliser — 4 bars on a staggered loop, the classic "audio is playing" tell */
+.di-eq { display: flex; align-items: flex-end; gap: 2px; height: 15px; }
+.di-eq i {
+  width: 2.5px;
+  border-radius: 2px;
+  background: var(--c, var(--green));
+  animation: di-eq 900ms ease-in-out infinite;
+  transform-origin: bottom;
+}
+.di-eq i:nth-child(1) { height: 60%; animation-delay: -180ms; }
+.di-eq i:nth-child(2) { height: 100%; animation-delay: -520ms; }
+.di-eq i:nth-child(3) { height: 45%;  animation-delay: -80ms;  }
+.di-eq i:nth-child(4) { height: 78%;  animation-delay: -360ms; }
+.di-eq.is-paused i { animation-play-state: paused; height: 32%; }
+@keyframes di-eq { 0%, 100% { transform: scaleY(.32); } 50% { transform: scaleY(1); } }
+
+/* Voice waveform — wider, symmetric version of the equaliser */
+.di-wave { display: flex; align-items: center; gap: 2px; height: 20px; }
+.di-wave i {
+  width: 2.5px; height: 100%;
+  border-radius: 2px;
+  background: var(--c, var(--red));
+  animation: di-wave 1100ms ease-in-out infinite;
+}
+@keyframes di-wave { 0%, 100% { transform: scaleY(.18); } 50% { transform: scaleY(1); } }
+
+/* Pulsing dot for recording states */
+.di-dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--c, var(--red));
+  animation: di-pulse 1.6s ease-in-out infinite;
+  flex: 0 0 auto;
+}
+@keyframes di-pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.82); } }
+
+/* Radiating rings for AirDrop / Hotspot / NFC */
+.di-ripple { position: relative; width: 22px; height: 22px; flex: 0 0 auto; }
+.di-ripple i {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--c, var(--accent));
+  opacity: 0;
+  animation: di-ripple 1.9s ease-out infinite;
+}
+.di-ripple i:nth-child(2) { animation-delay: .63s; }
+.di-ripple i:nth-child(3) { animation-delay: 1.26s; }
+@keyframes di-ripple {
+  0%   { transform: scale(.25); opacity: .9; }
+  70%  { opacity: .18; }
+  100% { transform: scale(1); opacity: 0; }
+}
+
+/* Determinate ring built from a conic-gradient; --p is 0‥100 */
+.di-ring {
+  position: relative;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  background: conic-gradient(var(--c, #fff) calc(var(--p, 0) * 1%), rgba(255, 255, 255, .16) 0);
+  transition: background 400ms linear;
+}
+.di-ring::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: var(--island-bg);
+}
+.di-ring span {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 9px;
+  font-weight: 700;
+  z-index: 1;
+}
+.di-ring--lg { width: 44px; height: 44px; }
+.di-ring--lg span { font-size: 12px; }
+
+/* Linear progress */
+.di-bar {
+  position: relative;
+  height: 4px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, .18);
+  overflow: hidden;
+}
+.di-bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--p, 0) * 1%);
+  border-radius: 3px;
+  background: var(--c, #fff);
+  transition: width 500ms linear;
+}
+.di-bar--slim { height: 3px; }
+
+/* Battery glyph with a live fill */
+.di-batt {
+  position: relative;
+  width: 24px; height: 12px;
+  border-radius: 3.5px;
+  border: 1.4px solid rgba(255, 255, 255, .5);
+  flex: 0 0 auto;
+}
+.di-batt::after {
+  content: "";
+  position: absolute;
+  right: -3.5px; top: 3px;
+  width: 2px; height: 4px;
+  border-radius: 0 1.5px 1.5px 0;
+  background: rgba(255, 255, 255, .5);
+}
+.di-batt i {
+  position: absolute;
+  inset: 1.4px;
+  width: calc(var(--p, 50) * 1% - 2.8px);
+  min-width: 2px;
+  border-radius: 1.5px;
+  background: var(--c, var(--green));
+  transition: width 600ms var(--ease-out);
+}
+
+/* Face ID scan sweep */
+.di-scan { position: relative; width: 26px; height: 26px; overflow: hidden; border-radius: 6px; }
+.di-scan svg { width: 26px; height: 26px; color: #fff; }
+.di-scan::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--c, #fff), transparent);
+  filter: blur(.5px);
+  animation: di-scan 1.5s ease-in-out infinite;
+}
+@keyframes di-scan {
+  0%   { transform: translateY(1px);  opacity: 0; }
+  15%  { opacity: 1; }
+  85%  { opacity: 1; }
+  100% { transform: translateY(24px); opacity: 0; }
+}
+
+/* Success check that draws itself */
+.di-check circle { stroke-dasharray: 88; stroke-dashoffset: 88; animation: di-draw .55s var(--ease-out) forwards; }
+.di-check path   { stroke-dasharray: 32; stroke-dashoffset: 32; animation: di-draw .40s var(--ease-out) .30s forwards; }
+@keyframes di-draw { to { stroke-dashoffset: 0; } }
+
+.di-spin { animation: di-spin 1.1s linear infinite; }
+@keyframes di-spin { to { transform: rotate(360deg); } }
+
+/* ── Expanded layout ────────────────────────────────────────────────── */
+.di-expanded {
+  display: flex;
+  flex-direction: column;
+  gap: 13px;
+  padding: 2px;
+}
+.di-exp__head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  /* Right-hand padding keeps the header clear of the camera lens, which is
+     parked at the top-centre of the box. */
+  padding-right: 8px;
+}
+.di-exp__head--split { justify-content: space-between; }
+/* The trailing slot (a percentage, an ETA, a duration) is the one thing that
+   must stay whole; the titles ellipsise instead. */
+.di-exp__head > .di-text,
+.di-exp__head > .di-ico,
+.di-exp__head > .di-ring { flex: 0 0 auto; }
+.di-exp__headgap { width: 10px; flex: 0 0 auto; }
+.di-exp__titles { min-width: 0; flex: 1 1 auto; }
+.di-exp__title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.di-exp__sub {
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, .55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.di-exp__body { display: flex; flex-direction: column; gap: 8px; }
+.di-exp__times {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, .45);
+  font-variant-numeric: tabular-nums;
+}
+.di-exp__actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+}
+.di-exp__actions--wide { gap: 40px; }
+
+.di-btn {
+  display: grid;
+  place-items: center;
+  width: 42px; height: 42px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .13);
+  color: #fff;
+  cursor: pointer;
+  transition: transform 220ms var(--ease-spring), background 180ms linear;
+}
+.di-btn:hover  { background: rgba(255, 255, 255, .2); }
+.di-btn:active { transform: scale(.88); }
+.di-btn svg { width: 19px; height: 19px; }
+.di-btn--lg { width: 52px; height: 52px; }
+.di-btn--lg svg { width: 24px; height: 24px; }
+.di-btn--solid { background: var(--c, var(--accent)); }
+.di-btn--solid:hover { background: var(--c, var(--accent)); filter: brightness(1.12); }
+.di-btn--green { background: var(--green); }
+.di-btn--red   { background: var(--red); }
+.di-btn--ghost { background: rgba(255, 255, 255, .09); }
+
+.di-btn-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, .6);
+}
+
+/* Turn-by-turn banner */
+.di-maneuver {
+  display: grid;
+  place-items: center;
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  background: var(--green);
+  color: #fff;
+  flex: 0 0 auto;
+}
+.di-maneuver svg { width: 26px; height: 26px; }
+
+/* Sports scoreboard */
+.di-score { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.di-team  { display: flex; flex-direction: column; align-items: center; gap: 5px; flex: 1 1 0; }
+.di-team__badge {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  color: #fff;
+}
+.di-team__name { font-size: 10.5px; color: rgba(255, 255, 255, .6); }
+.di-score__nums { font-size: 26px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.di-score__clock {
+  font-size: 10px;
+  color: var(--green);
+  text-align: center;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+/* Chip row used by AirPods / hotspot / SharePlay detail views */
+.di-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.di-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, .1);
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, .8);
+}
+.di-chip svg { width: 12px; height: 12px; }
+
+/* Entry pop for freshly-mounted expanded content */
+.di-enter { animation: di-enter 380ms var(--ease-out) both; }
+@keyframes di-enter {
+  from { opacity: 0; transform: translateY(-6px) scale(.97); }
+  to   { opacity: 1; transform: none; }
+}

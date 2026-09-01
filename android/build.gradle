@@ -1,0 +1,10 @@
+// Top-level build file. The app deliberately depends on nothing but the
+// Android Gradle Plugin — no AndroidX, no Kotlin, no third-party libraries —
+// so the whole thing is one Activity hosting one WebView.
+plugins {
+    id 'com.android.application' version '8.5.2' apply false
+}
+
+tasks.register('clean', Delete) {
+    delete rootProject.layout.buildDirectory
+}

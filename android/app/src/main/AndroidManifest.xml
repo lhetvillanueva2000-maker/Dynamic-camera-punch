@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+      Permission budget, and why each one is actually needed. Nothing here is
+      requested "just in case" — every entry is read by code in this app.
+
+        SYSTEM_ALERT_WINDOW    the whole point: draw the island on top of every
+                               other app. User-granted in Settings, not a runtime
+                               dialog.
+        FOREGROUND_SERVICE     the island has to survive the user leaving our app.
+        …_SPECIAL_USE          Android 14 requires a declared FGS type; a
+                               persistent system overlay is not media/location/
+                               sync, so SPECIAL_USE with a justification is the
+                               honest classification.
+        POST_NOTIFICATIONS     Android 13+ needs this to show the ongoing service
+                               notification the OS requires us to have anyway.
+        RECEIVE_BOOT_COMPLETED optional "start on boot", off by default.
+
+      Notification access (BIND_NOTIFICATION_LISTENER_SERVICE) is what makes the
+      island show *real* content — the playing track, an incoming call, a running
+      timer. It is granted by the user in Settings and can be revoked any time;
+      without it the island still works from battery/ringer/headset broadcasts.
+
+      Deliberately NOT requested:
+        QUERY_ALL_PACKAGES  — the app picker lists installed apps through the
+                              <queries> declaration below, which grants sight of
+                              launcher-visible apps only. Notification icons come
+                              from the notification itself either way.
+        READ_PHONE_STATE    — call state is read from the dialer's own
+                              notification instead of the telephony API.
+        INTERNET            — the app has never made a network request.
+    -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Private signalling between our own processes (main ↔ :demo). Signature
+         level, so only a build signed with the same key can send it.
+
+         The name is derived from ${applicationId} rather than hard-coded, so the
+         debug build declares com.dcp.punch.debug.permission.INTERNAL. A custom
+         permission name is global to the device: if two packages signed with
+         different keys declare the same one, the second to be installed is
+         rejected outright with INSTALL_FAILED_DUPLICATE_PERMISSION — which
+         Android surfaces as a bare "App not installed." Since debug and release
+         are signed with different keys by design, sharing the name made them
+         mutually exclusive. -->
+    <permission
+        android:name="${applicationId}.permission.INTERNAL"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="${applicationId}.permission.INTERNAL" />
+
+    <!--
+      Package visibility for the app picker.
+
+      This is how you list installed apps on Android 11+ WITHOUT
+      QUERY_ALL_PACKAGES, which is a sensitive permission Google requires a
+      written justification for and which this app has never needed. Declaring
+      the launcher intent grants visibility of exactly the apps that have a
+      launcher icon — the ones a person would recognise and might want on the
+      island — and nothing else. Services, providers and headless packages stay
+      invisible to us, which is the correct amount of access for a picker.
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
+    <application
+        android:name=".DcpApp"
+        android:allowBackup="true"
+        android:hardwareAccelerated="true"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:largeHeap="true"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Dcp"
+        android:usesCleartextTraffic="false">
+
+        <!-- Control panel: permissions checklist, master switch, RAM budget. -->
+        <activity
+            android:name=".ui.MainActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|density|uiMode">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- The "+" picker: choose which apps and which kinds of content the
+             island is allowed to show. -->
+        <activity
+            android:name=".ui.PickerActivity"
+            android:exported="false"
+            android:label="@string/picker_apps_title"
+            android:theme="@style/Theme.Dcp" />
+
+        <!-- The support page: a bundled, offline HTML page. Shares the :demo
+             process with the demonstration, because both are WebViews and the
+             two are never open at once. -->
+        <activity
+            android:name=".ui.SupportActivity"
+            android:exported="false"
+            android:process=":demo"
+            android:label="@string/support_title"
+            android:theme="@style/Theme.Dcp"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|density|uiMode|fontScale" />
+
+        <!--
+          The live demonstration: the original WebView sandbox. It is a separate
+          process on purpose. A WebView costs ~60-90 MB, and running it in its own
+          process means closing the demo returns every byte to the system instead
+          of leaving a fattened heap behind in the process that hosts the overlay.
+        -->
+        <activity
+            android:name=".ui.DemoActivity"
+            android:exported="false"
+            android:process=":demo"
+            android:label="@string/demo_title"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|density|uiMode|fontScale" />
+
+        <!-- Owns the overlay windows for as long as the theme is enabled. -->
+        <service
+            android:name=".overlay.IslandService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Persistent system-wide UI overlay (Dynamic Island) that must remain visible over other apps while enabled by the user." />
+        </service>
+
+        <!-- Real system content: media sessions, calls, timers, notifications. -->
+        <service
+            android:name=".data.DcpNotificationListener"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
+        <receiver
+            android:name=".BootReceiver"
+            android:exported="true"
+            android:enabled="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+    </application>
+
+</manifest>

@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Three panes and a tab bar.
+
+  All three panes are inflated once and kept, rather than swapped in and out.
+  They are cheap (a few dozen views each), and keeping them means a tab switch
+  is a cross-fade of things already laid out instead of an inflate — which is
+  what makes the transition smooth on a slow device rather than a stutter.
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/app_background">
+
+    <!--
+      The panes fill the window rather than stopping above the tab bar: the bar
+      floats over them now, and each pane pads its own bottom so the last row
+      can still be scrolled clear of it. A list that runs under a floating
+      control reads as one surface; a list guillotined by a bar does not.
+    -->
+    <FrameLayout
+        android:id="@+id/pane_host"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <include layout="@layout/tab_cards" />
+        <include layout="@layout/tab_look" />
+        <include layout="@layout/tab_settings" />
+    </FrameLayout>
+
+    <!-- Detail screens are pushed in here, over the panes AND the tab bar. -->
+    <FrameLayout
+        android:id="@+id/screen_host"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <com.dcp.punch.ui.FloatingTabBar
+        android:id="@+id/tab_bar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal" />
+
+    <!-- Capacity, floating above the Settings pane. Hidden on the other tabs;
+         it describes the memory ceiling, which lives there. -->
+    <LinearLayout
+        android:id="@+id/capacity_root"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|end"
+        android:layout_marginEnd="16dp"
+        android:layout_marginBottom="100dp"
+        android:orientation="vertical"
+        android:gravity="end"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:id="@+id/capacity_panel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="8dp"
+            android:background="@drawable/bg_card"
+            android:padding="14dp"
+            android:visibility="gone">
+
+            <TextView style="@style/CardTitle" android:text="@string/capacity_title" />
+
+            <TextView
+                android:id="@+id/capacity_body"
+                style="@style/CardBody"
+                android:layout_marginTop="6dp" />
+
+            <TextView
+                android:id="@+id/capacity_note"
+                style="@style/CardFine"
+                android:layout_marginTop="10dp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/capacity_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_pill_active"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="10dp"
+            android:textColor="@color/text"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+</FrameLayout>

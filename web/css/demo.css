@@ -1,0 +1,277 @@
+/* ============================================================================
+   demo.css — the harness around the phones: header, control panel, buttons.
+   Mobile-first: single column by default, two columns from 1080px up.
+   ========================================================================== */
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px clamp(14px, 4vw, 34px);
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.topbar__brand { display: flex; align-items: center; gap: 13px; }
+.topbar__logo {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  flex: 0 0 auto;
+  display: block;
+  box-shadow: 0 4px 14px rgba(88, 40, 190, .35);
+}
+
+.topbar h1 { font-size: 16px; font-weight: 650; letter-spacing: -.015em; }
+.topbar p  { font-size: 12.5px; color: var(--text-dim); }
+.topbar__actions { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+
+/* ── Segmented control ──────────────────────────────────────────────── */
+.segmented {
+  display: flex;
+  padding: 3px;
+  gap: 2px;
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: 11px;
+}
+.segmented__btn {
+  border: 0;
+  background: transparent;
+  padding: 7px 13px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 550;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background 200ms var(--ease-out), color 200ms var(--ease-out);
+  white-space: nowrap;
+}
+.segmented__btn:hover { color: var(--text); }
+.segmented__btn.is-active {
+  background: var(--bg-elev-2);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .3);
+}
+
+.icon-btn {
+  display: grid;
+  place-items: center;
+  width: 38px; height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--bg-elev);
+  cursor: pointer;
+  color: var(--text-dim);
+  transition: color 200ms, border-color 200ms;
+}
+.icon-btn:hover { color: var(--text); border-color: var(--text-faint); }
+.icon-btn svg { width: 18px; height: 18px; }
+
+/* ── Stage layout ───────────────────────────────────────────────────── */
+.stage {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: clamp(22px, 4vw, 40px);
+  align-items: start;
+  padding: clamp(20px, 4vw, 38px) clamp(14px, 4vw, 34px) 40px;
+  max-width: 1520px;
+  margin: 0 auto;
+}
+
+.screens {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: clamp(20px, 4vw, 46px);
+}
+
+/* Both-variant view: the pair simply wraps. The frames are never squeezed —
+   see --phone-scale below, and .phone__stage in phone.css. */
+.screens.is-both { --phone-scale: .87; }
+
+/* ── Control panel ──────────────────────────────────────────────────── */
+.panel {
+  background: var(--bg-elev);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  position: sticky;
+  top: 90px;
+}
+
+.panel__status {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 13px;
+  border-radius: 13px;
+  background: var(--bg-elev-2);
+  border: 1px solid var(--line-soft);
+  font-size: 12.5px;
+  color: var(--text-dim);
+  min-height: 44px;
+}
+.panel__dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--text-faint);
+  flex: 0 0 auto;
+  transition: background 250ms, box-shadow 250ms;
+}
+.panel__dot[data-live="on"] {
+  background: var(--green);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--green) 22%, transparent);
+}
+#status-text b { color: var(--text); font-weight: 600; }
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  background: var(--bg-elev-2);
+  border-radius: 11px;
+}
+.tabs__btn {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  padding: 8px 6px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 550;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background 200ms, color 200ms;
+}
+.tabs__btn.is-active { background: var(--bg-elev); color: var(--text); }
+
+.tabpanel { display: none; flex-direction: column; gap: 13px; }
+.tabpanel.is-active { display: flex; animation: di-enter 300ms var(--ease-out) both; }
+
+.panel__hint { font-size: 12px; color: var(--text-faint); line-height: 1.5; }
+.panel__hint strong { color: var(--text-dim); }
+.panel__row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.btn-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+  gap: 8px;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg-elev-2);
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 550;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 200ms var(--ease-spring), border-color 200ms, background 200ms;
+}
+.btn:hover  { border-color: var(--text-faint); }
+.btn:active { transform: scale(.96); }
+.btn.is-live { border-color: var(--green); background: color-mix(in srgb, var(--green) 12%, var(--bg-elev-2)); }
+
+.btn__ico {
+  display: grid;
+  place-items: center;
+  width: 26px; height: 26px;
+  border-radius: 8px;
+  background: var(--c, var(--accent));
+  color: #fff;
+  flex: 0 0 auto;
+}
+.btn__ico svg { width: 15px; height: 15px; }
+.btn__txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.btn--ghost  { flex: 1 1 auto; justify-content: center; background: transparent; }
+.btn--danger { flex: 1 1 auto; justify-content: center; background: transparent; color: var(--red); border-color: color-mix(in srgb, var(--red) 34%, var(--line)); }
+
+.howto { display: flex; flex-direction: column; gap: 11px; }
+.howto li {
+  display: grid;
+  grid-template-columns: 108px 1fr;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text-faint);
+  line-height: 1.5;
+}
+.howto b { color: var(--text); font-weight: 600; font-size: 12.5px; }
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  justify-content: space-between;
+  padding: 18px clamp(14px, 4vw, 34px) 30px;
+  border-top: 1px solid var(--line-soft);
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+/* ── Responsive ─────────────────────────────────────────────────────── */
+@media (min-width: 1080px) {
+  .stage { grid-template-columns: minmax(0, 1fr) 388px; }
+}
+
+@media (max-width: 720px) {
+  /* Scale, never squeeze. Discrete steps because CSS calc cannot divide a
+     viewport unit by a pixel length to produce the unitless ratio scale()
+     needs, and a phone that is 60% as wide but 90% as tall is not a phone. */
+  :root,
+  .screens.is-both { --phone-scale: .84; }
+  .panel { position: static; }
+  .topbar p { display: none; }
+  .btn-grid { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); }
+}
+
+@media (max-width: 480px) {
+  :root,
+  .screens.is-both { --phone-scale: .74; }
+}
+
+@media (max-width: 400px) {
+  :root,
+  .screens.is-both { --phone-scale: .62; }
+}
+
+@media (max-width: 340px) {
+  :root,
+  .screens.is-both { --phone-scale: .52; }
+}
+
+/* ── Signature, right at the bottom of the page ─────────────────────── */
+.signature {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 0 16px 34px;
+  text-align: center;
+}
+.signature__by {
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+.signature__stack {
+  font-size: 11.5px;
+  color: var(--text-faint);
+  letter-spacing: .02em;
+}
