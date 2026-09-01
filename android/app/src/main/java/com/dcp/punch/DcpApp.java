@@ -28,6 +28,7 @@ public class DcpApp extends Application {
         super.onCreate();
         instance = this;
         store = new IslandStore();
+        store.attach(this);
         memory = new MemoryBudget(this);
     }
 

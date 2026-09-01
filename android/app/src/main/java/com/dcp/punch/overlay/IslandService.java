@@ -24,6 +24,7 @@ import com.dcp.punch.R;
 import com.dcp.punch.data.IslandStore;
 import com.dcp.punch.data.Presentation;
 import com.dcp.punch.data.SystemMonitor;
+import com.dcp.punch.mem.Appearance;
 import com.dcp.punch.mem.MemoryBudget;
 import com.dcp.punch.mem.Prefs;
 import com.dcp.punch.ui.MainActivity;
@@ -145,9 +146,14 @@ public class IslandService extends Service implements IslandStore.Listener {
         }
 
         if (intent != null && ACTION_REFRESH.equals(intent.getAction())) {
-            // "Keep on screen" was toggled while we were already running. There
-            // is no store change to ride on, so the setting is applied here.
-            if (running) main.post(() -> syncIslandWindow(true));
+            // A setting changed in the control panel while we were running —
+            // "keep on screen", or any dial on the Island tab. There is no store
+            // change to ride on, so it is applied here.
+            if (running) main.post(() -> {
+                if (island != null) island.applyAppearance();
+                refreshIslandWindow();
+                syncIslandWindow(true);
+            });
             return START_STICKY;
         }
 
@@ -216,7 +222,7 @@ public class IslandService extends Service implements IslandStore.Listener {
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 overlayType(), baseFlags(), PixelFormat.TRANSLUCENT);
         islandLp.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
-        islandLp.y = Math.round(island.islandTopPx());
+        applyOffsets();
         // Draw into the punch-hole area rather than being pushed below it —
         // without this the island would float in the status bar instead of
         // straddling the camera.
@@ -288,6 +294,24 @@ public class IslandService extends Service implements IslandStore.Listener {
         });
     }
 
+    /**
+     * Position the window from the island's own top offset plus whatever the
+     * control panel's nudge dials say.
+     *
+     * X is a deliberate exception to "the camera never moves": the window is
+     * centre-anchored, so a horizontal offset shifts the island *and* its lens
+     * together. That is what makes it useful — a cutout that is not perfectly
+     * centred on a given phone can be lined up — but it also means the dial
+     * should stay at zero unless the hole genuinely is off-centre.
+     */
+    private void applyOffsets() {
+        if (island == null || islandLp == null) return;
+        float d = getResources().getDisplayMetrics().density;
+        Appearance look = Appearance.get(this);
+        islandLp.x = Math.round(look.get(Appearance.OFFSET_X) * d);
+        islandLp.y = Math.round(island.islandTopPx() + look.get(Appearance.OFFSET_Y) * d);
+    }
+
     /** Keep the window's flags and offset in step with the island's state. */
     private void refreshIslandWindow() {
         if (island == null || islandLp == null || !islandAttached) return;
@@ -300,7 +324,7 @@ public class IslandService extends Service implements IslandStore.Listener {
             islandLp.dimAmount = 0f;
         }
         islandLp.flags = flags;
-        islandLp.y = Math.round(island.islandTopPx());
+        applyOffsets();
         try { wm.updateViewLayout(island, islandLp); } catch (Exception ignored) { }
     }
 

@@ -1,5 +1,69 @@
 # Changelog
 
+## v2.6.0 — three tabs, and a theme you can actually theme
+
+The control panel was one long scroll that did everything. It is now three panes
+with a sliding indicator: **Cards** (what the island shows), **Look** (how it
+looks and moves), **Settings** (you, your device, support). Tabs press and lift
+under a finger, panes cross-fade and rise 14dp — the hover/press feedback the
+request asked for, drawn on Canvas like everything else here.
+
+**Look is the real addition.** Seventeen dials: position on both axes, compact
+corner radius, expanded radius and width, idle scale, opacity at rest, border
+width, background and outline colour, shadow strength, animation speed, bounce,
+reduce-animation, glow, whether an arriving notification lands minimised or
+already open, and how long an alert stays up. Above them, a **live preview** that
+loops idle → compact → expanded with your current settings, so a dial's effect is
+visible without leaving the screen. Each slider fires cheap updates while
+dragging and commits on release, so dragging one does not thrash the overlay
+redrawing behind the app. The preview stops itself the moment its window is
+invisible; an animation nobody can see is pure battery.
+
+**Presets with your own names.** Save the whole Look tab as "Night" or "Discreet"
+and switch in one tap. Stored as JSON, so a dial added later needs no migration —
+unknown keys are ignored, missing ones fall back. Saving over a name replaces it.
+One bug caught while writing it: the preset was storing the cutout variant into
+the appearance file, where nothing reads it. A preset that silently forgets half
+of what it promised is worse than one that never offered.
+
+**Gestures are assignable.** Tap, double tap, long press, swipe left, swipe right
+→ open the app, expand, collapse, dismiss, swap, play/pause, next, previous, or
+nothing. Defaults are unchanged, and double tap defaults to *nothing* on purpose:
+if nothing is bound to it, a single tap fires immediately instead of waiting
+300 ms to find out whether a second one is coming. Assignments are stored by
+name, not by menu position, so inserting an action in a later version cannot
+silently remap "open the app" to "play/pause".
+
+**CPU and storage, next to RAM.** Total/available/used RAM, used and free
+storage, and the chipset with its core count. The CPU figure is **this app's own
+share of wall-clock time**, and the card says so, because a live system-wide CPU
+percentage has not been readable by an ordinary app since Android 8 — `/proc/stat`
+was restricted to stop apps fingerprinting the device. Showing a made-up system
+meter would have been easy and dishonest.
+
+**A support page, bundled and offline.** Opened from Settings, running in the
+`:demo` process so it costs nothing while closed. It makes no network requests at
+all — the supplied page's web font was replaced with a system stack and its
+remote QR image with a local one — which is the only version that could work
+anyway in an app that declares no `INTERNET` permission. Nine browser assertions
+check it, starting with "issues zero requests".
+
+> The page ships **without a QR image**. `donate-qr.png` was not supplied and one
+> was deliberately not generated: an invented payment QR could route a real
+> payment to the wrong place. Drop your own into
+> `android/app/src/main/assets/support/` and rebuild. The account details you
+> gave are on the page and copyable as they are.
+
+None of Material Capsule's code, assets or resources were copied. The features
+were reimplemented from scratch — which is also the only way they fit a build
+with no libraries in it at all.
+
+Verified: `clean assembleRelease assembleDebug lintDebug` → **zero lint errors**;
+both APKs signature-verified across API 24–34; still exactly six permissions, no
+`QUERY_ALL_PACKAGES`, no `INTERNET`; 31 demo assertions and 9 support-page
+assertions pass. Release 172,023 B, debug 238,413 B. Still not launched on a
+device here — this environment has no KVM.
+
 ## v2.5.0 — one axis, one copy, fewer bitmaps
 
 **The expanded view is centred as a whole.** The art and the text are measured

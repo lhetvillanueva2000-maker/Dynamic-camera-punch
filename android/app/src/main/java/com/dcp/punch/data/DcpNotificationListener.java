@@ -12,6 +12,7 @@ import android.service.notification.StatusBarNotification;
 import android.text.TextUtils;
 
 import com.dcp.punch.DcpApp;
+import com.dcp.punch.mem.Appearance;
 import com.dcp.punch.mem.Prefs;
 
 /**
@@ -135,7 +136,8 @@ public class DcpNotificationListener extends NotificationListenerService {
         p.icon = smallIcon(n);
         p.accent = accentFor(cat, n);
         p.contentIntent = n.contentIntent;
-        p.durationMs = 3200L;
+        // How long an alert stays up is the user's dial, not a constant.
+        p.durationMs = Appearance.get(this).autoHideMs();
 
         // A message is the case the pill exists for, so it gets its own shape:
         // who it is from on the headline, what they actually said underneath,
@@ -337,9 +339,11 @@ public class DcpNotificationListener extends NotificationListenerService {
         p.compactText = shorten(firstSentence(said));
         p.accent = 0xFF0A84FF;
         p.motif = Presentation.Motif.NONE;
-        // Long enough to actually read a line before it shrinks back into the
-        // cutout; 3.2s is fine for "charging" and far too quick for a sentence.
-        p.durationMs = 5200L;
+        // A message needs longer on screen than "charging" does, so it gets a
+        // little more than the dial says — but never less, and never more than
+        // the "until opened" setting already implies.
+        long dial = Appearance.get(this).autoHideMs();
+        p.durationMs = dial == Long.MAX_VALUE ? dial : Math.max(dial, dial + 2000L);
 
         // The avatar, when the app supplies one. This is the sender's picture in
         // every chat app worth the name, and it is already in the notification —

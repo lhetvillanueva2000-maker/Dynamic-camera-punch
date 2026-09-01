@@ -15,6 +15,7 @@ public final class Prefs {
     private static final String K_ALWAYS = "island_always_visible";
     private static final String K_AUTO_MEM = "auto_memory";
     private static final String K_HIDE_SHADE = "hide_from_shade";
+    private static final String K_USER_NAME = "user_name";
 
     private static Prefs instance;
 
@@ -72,4 +73,12 @@ public final class Prefs {
      */
     public boolean isHideFromShade() { return sp.getBoolean(K_HIDE_SHADE, false); }
     public void setHideFromShade(boolean v) { sp.edit().putBoolean(K_HIDE_SHADE, v).apply(); }
+
+    /**
+     * Whatever the user wants the footer to call them. Stored on the device and
+     * read by nothing but the footer — this app has no INTERNET permission, so
+     * it could not send it anywhere even if it wanted to.
+     */
+    public String getUserName() { return sp.getString(K_USER_NAME, ""); }
+    public void setUserName(String v) { sp.edit().putString(K_USER_NAME, v == null ? "" : v.trim()).apply(); }
 }

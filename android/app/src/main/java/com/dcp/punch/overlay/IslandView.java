@@ -24,8 +24,10 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.animation.PathInterpolator;
 
+import com.dcp.punch.data.Gestures;
 import com.dcp.punch.data.IslandStore;
 import com.dcp.punch.data.Presentation;
+import com.dcp.punch.mem.Appearance;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -86,7 +88,13 @@ public class IslandView extends View {
     private final float d;                            // dp → px
     private final IslandStore store;
     private final Callbacks callbacks;
+    private final Appearance look;
+    private final Gestures gestures;
     private String variant;
+
+    /** Time of the last completed tap, for telling a double tap from two taps. */
+    private long lastTapAt;
+    private static final long DOUBLE_TAP_MS = 260;
 
     /* ── Animated geometry ───────────────────────────────────────────── */
     private float curW, curH, curR;
@@ -108,6 +116,8 @@ public class IslandView extends View {
     private final Paint lens = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint lensRing = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint track = new Paint(Paint.ANTI_ALIAS_FLAG);
+    /** Glow only. Kept apart from `body` so the two shadow layers never fight. */
+    private final Paint glow = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final TextPaint compactText = new TextPaint(Paint.ANTI_ALIAS_FLAG);
     private final TextPaint titleText = new TextPaint(Paint.ANTI_ALIAS_FLAG);
     private final TextPaint subText = new TextPaint(Paint.ANTI_ALIAS_FLAG);
@@ -130,6 +140,8 @@ public class IslandView extends View {
         this.store = store;
         this.variant = variant;
         this.callbacks = cb;
+        this.look = Appearance.get(ctx);
+        this.gestures = Gestures.get(ctx);
         this.d = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 1,
                 ctx.getResources().getDisplayMetrics());
 
@@ -137,13 +149,13 @@ public class IslandView extends View {
             if (moved) return;
             held = true;
             performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
-            store.toggleExpanded();
+            run(gestures.actionFor(Gestures.Gesture.LONG_PRESS));
         };
 
         setLayerType(LAYER_TYPE_HARDWARE, null);
 
         body.setColor(Color.BLACK);
-        body.setShadowLayer(14 * d, 0, 6 * d, 0x8C000000);
+        applySurface();
         // shadowLayer needs software rendering for the blur on some drivers;
         // hardware layers handle it since API 28, and below that it degrades to
         // a hard edge rather than failing.
@@ -165,6 +177,35 @@ public class IslandView extends View {
         computeTarget();
         curW = tgtW; curH = tgtH; curR = tgtR;
     }
+
+    /**
+     * Re-read the appearance dials. Called when the control panel changes them,
+     * so a running overlay updates without being torn down and rebuilt.
+     */
+    public void applyAppearance() {
+        applySurface();
+        computeTarget();
+        curW = tgtW; curH = tgtH; curR = tgtR;
+        requestLayout();
+        invalidate();
+    }
+
+    private void applySurface() {
+        body.setColor(look.get(Appearance.BG_COLOR));
+        float sh = look.shadowAlpha();
+        if (sh > 0.02f) {
+            body.setShadowLayer(14 * d, 0, 6 * d, ((int) (255 * sh)) << 24);
+        } else {
+            body.clearShadowLayer();
+        }
+        int bw = look.get(Appearance.BORDER_WIDTH);
+        lensRing.setStrokeWidth(1.5f * d);
+        outlineWidth = bw * d;
+        outlineColour = look.get(Appearance.OUTLINE_COLOR);
+    }
+
+    private float outlineWidth;
+    private int outlineColour;
 
     public void setVariant(String v) {
         this.variant = v;
@@ -189,22 +230,29 @@ public class IslandView extends View {
         Presentation p = shown;
         float maxW = maxWidthPx();
 
+        float scale = look.idleScale();
+
         if (p == null) {
-            tgtW = (isA() ? IDLE_A_W : IDLE_B_W) * d;
-            tgtH = (isA() ? IDLE_A_H : IDLE_B_H) * d;
+            tgtW = (isA() ? IDLE_A_W : IDLE_B_W) * d * scale;
+            tgtH = (isA() ? IDLE_A_H : IDLE_B_H) * d * scale;
             tgtR = isA() ? Math.min(tgtH * 0.62f, 18 * d) : tgtH / 2f;
             return;
         }
 
         if (store.isExpanded()) {
-            tgtW = Math.min(EXP_W * d, maxW);
+            tgtW = Math.min(look.get(Appearance.EXP_WIDTH) * d, maxW);
             tgtH = expandedHeight(p, tgtW);
-            tgtR = 34 * d;
+            tgtR = look.get(Appearance.EXP_RADIUS) * d;
             return;
         }
 
         tgtH = COMPACT_H * d;
-        tgtR = tgtH / 2f;
+        // A corner radius of half the height is a full pill, which is the
+        // default; anything smaller squares it off. The dial can never exceed
+        // half the height, or the shape would stop being drawable.
+        int rDial = look.get(Appearance.CORNER_RADIUS);
+        tgtR = Math.min(tgtH / 2f, rDial * d);
+        if (rDial <= 0) tgtR = tgtH / 2f;
 
         // Symmetric slots: the camera gap has to land on the pill's centre,
         // because that is where the hole is. Padding both sides out to
@@ -302,6 +350,7 @@ public class IslandView extends View {
      * content fade, the delayed hand-off, and the view fade.
      */
     private void cancelClose() {
+        removeCallbacks(singleTap);
         if (closeContentFade != null) { closeContentFade.cancel(); closeContentFade = null; }
         if (closeViewFade != null) { closeViewFade.cancel(); closeViewFade = null; }
         if (closeHandoff != null) { removeCallbacks(closeHandoff); closeHandoff = null; }
@@ -374,8 +423,11 @@ public class IslandView extends View {
         }
 
         morph = ValueAnimator.ofFloat(0f, 1f);
-        morph.setDuration((long) MORPH_MS);
-        morph.setInterpolator(new PathInterpolator(0.32f, 0.72f, 0f, 1f));
+        morph.setDuration(Math.max(1, (long) (MORPH_MS * look.animScale())));
+        float tension = look.bounceTension();
+        morph.setInterpolator(tension <= 0.01f
+                ? new PathInterpolator(0.32f, 0.72f, 0f, 1f)
+                : new android.view.animation.OvershootInterpolator(tension));
         morph.addUpdateListener(a -> {
             float t = (float) a.getAnimatedValue();
             curW = lerp(fromW, tgtW, t);
@@ -437,7 +489,24 @@ public class IslandView extends View {
         canvas.save();
         if (pressScale != 1f) canvas.scale(pressScale, pressScale, cx, top + curH / 2f);
 
-        // Body
+        // Body. The resting-opacity dial applies only when there is nothing to
+        // show — a pill carrying content is always solid, or it is unreadable.
+        boolean resting = shown == null;
+        body.setAlpha(resting
+                ? (int) (255 * Math.max(look.collapsedAlpha(), 0f))
+                : 255);
+
+        // Glow, behind everything: a soft halo in whatever colour the source
+        // app gave its notification. Drawn as a blurred shadow on a throwaway
+        // paint rather than a real blur, which would cost a render pass.
+        if (shown != null && look.flag(Appearance.GLOW) && contentAlpha > 0.01f) {
+            glow.setColor(0x00000000);
+            glow.setShadowLayer(20 * d, 0, 0,
+                    (shown.accent & 0x00FFFFFF) | ((int) (110 * contentAlpha) << 24));
+            r1.set(left + 6 * d, top + 4 * d, left + curW - 6 * d, top + curH - 2 * d);
+            canvas.drawRoundRect(r1, curR, curR, glow);
+        }
+
         r1.set(left, top, left + curW, top + curH);
         if (isA()) {
             // Square shoulders against the bezel, rounded chin. Drawn as a path
@@ -453,6 +522,14 @@ public class IslandView extends View {
             canvas.drawPath(bezelPath, body);
         } else {
             canvas.drawRoundRect(r1, curR, curR, body);
+        }
+
+        if (outlineWidth > 0.01f) {
+            lensRing.setColor(outlineColour);
+            lensRing.setStrokeWidth(outlineWidth);
+            if (isA()) canvas.drawPath(bezelPath, lensRing);
+            else canvas.drawRoundRect(r1, curR, curR, lensRing);
+            lensRing.setStrokeWidth(1.5f * d);
         }
 
         // Content
@@ -790,11 +867,13 @@ public class IslandView extends View {
 
                 if (!moved) {
                     tapX = e.getX(); tapY = e.getY();
-                    performClick();
+                    handleTap();
                     return true;
                 }
                 if (Math.abs(dx) > SWIPE_MIN_DP * d && Math.abs(dx) > Math.abs(dy)) {
-                    store.swap();                            // swipe ← / →
+                    run(gestures.actionFor(dx < 0
+                            ? Gestures.Gesture.SWIPE_LEFT
+                            : Gestures.Gesture.SWIPE_RIGHT));
                 } else if (dy > 26 * d && !store.isExpanded()) {
                     store.setExpanded(true);                 // swipe ↓
                 } else if (dy < -26 * d && store.isExpanded()) {
@@ -814,33 +893,108 @@ public class IslandView extends View {
     }
 
     private float tapX, tapY;
+    /* A stable instance, not a fresh lambda per call: removeCallbacks needs the
+       same object it was posted with, or a pending single tap survives the
+       double tap that was supposed to cancel it. A method reference to an
+       instance method is also the one form that does not read `gestures` while
+       the field initialisers are still running. */
+    private final Runnable singleTap = this::fireSingleTap;
 
-    @Override
-    public boolean performClick() {
-        super.performClick();          // fires accessibility + click listeners
-        onTap(tapX, tapY);
-        return true;
+    private void fireSingleTap() {
+        run(gestures.actionFor(Gestures.Gesture.TAP));
     }
 
-    private void onTap(float x, float y) {
-        Presentation p = shown;
-        if (p == null) return;
+    /**
+     * Decide between one tap and two.
+     *
+     * A double tap can only be recognised by waiting to see whether a second one
+     * arrives, and that wait is latency on every single tap. So it is only paid
+     * when it buys something: if the double-tap gesture is set to do nothing,
+     * the single tap fires immediately. Material Capsule warns about the same
+     * trade-off in its own settings, and it is worth being explicit about.
+     */
+    private void handleTap() {
+        // Announce the click once, here, before anything branches: accessibility
+        // services and any registered listener need it on every tap, and the
+        // deferred single-tap path would otherwise skip it for double taps and
+        // for presses on the expanded view's own buttons.
+        performClick();
 
-        if (store.isExpanded()) {
+        // A tap on an action button in the expanded view is not a gesture at
+        // all — it is a button press, and it always wins.
+        Presentation p = shown;
+        if (p != null && store.isExpanded()) {
             for (int i = 0; i < actionRects.size() && i < p.actions.length; i++) {
-                if (actionRects.get(i).contains(x, y)) {
+                if (actionRects.get(i).contains(tapX, tapY)) {
                     Presentation.Action a = p.actions[i];
                     if (a.run != null) a.run.run();
                     return;
                 }
             }
-            // Tapping the body of the expanded view opens the source app.
-            callbacks.onOpenContent(p);
-            return;
         }
 
-        if (p.tapAction != null && p.tapAction.run != null) p.tapAction.run.run();
-        else callbacks.onOpenContent(p);
+        boolean doubleWanted =
+                gestures.actionFor(Gestures.Gesture.DOUBLE_TAP) != Gestures.Action.NOTHING;
+        long now = SystemClock.uptimeMillis();
+
+        if (doubleWanted && now - lastTapAt < DOUBLE_TAP_MS) {
+            removeCallbacks(singleTap);
+            lastTapAt = 0;
+            run(gestures.actionFor(Gestures.Gesture.DOUBLE_TAP));
+            return;
+        }
+        lastTapAt = now;
+
+        if (doubleWanted) postDelayed(singleTap, DOUBLE_TAP_MS);
+        else singleTap.run();
+    }
+
+    @Override
+    public boolean performClick() {
+        return super.performClick();   // accessibility + any click listeners
+    }
+
+    /** Carry out one configured action. */
+    private void run(Gestures.Action action) {
+        Presentation p = shown;
+        switch (action) {
+            case NOTHING:
+                return;
+            case EXPAND:
+                store.setExpanded(true);
+                return;
+            case COLLAPSE:
+                store.setExpanded(false);
+                return;
+            case DISMISS:
+                store.dismissCurrent();
+                return;
+            case SWAP:
+                store.swap();
+                return;
+            case PLAY_PAUSE:
+            case NEXT_TRACK:
+            case PREVIOUS_TRACK: {
+                if (p == null) return;
+                // The transport controls arrive as the presentation's own
+                // actions, supplied by MediaMonitor in a fixed order:
+                // previous, play/pause, next.
+                int index = action == Gestures.Action.PREVIOUS_TRACK ? 0
+                        : action == Gestures.Action.NEXT_TRACK ? 2 : 1;
+                if (p.actions != null && p.actions.length == 3
+                        && p.actions[index] != null && p.actions[index].run != null) {
+                    p.actions[index].run.run();
+                } else if (p.tapAction != null && p.tapAction.run != null) {
+                    p.tapAction.run.run();      // whatever the source called primary
+                }
+                return;
+            }
+            default: {
+                if (p == null) return;
+                if (p.tapAction != null && p.tapAction.run != null) p.tapAction.run.run();
+                else callbacks.onOpenContent(p);
+            }
+        }
     }
 
     @Override

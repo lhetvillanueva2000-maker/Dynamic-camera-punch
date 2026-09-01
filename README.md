@@ -4,7 +4,7 @@
 
 # Dynamic Camera Punch
 
-### v2.5.0 — the theme
+### v2.6.0 — the theme
 
 **A Dynamic Island for your Android punch-hole — running over every app on the phone.**
 
@@ -54,17 +54,81 @@ no state change can slide the hole off the physical sensor.
 
 ### Gestures
 
-| Gesture | Result |
+Five gestures, and **you decide what each one does**. These are the defaults:
+
+| Gesture | Default |
 |---|---|
 | **Tap** | Opens the app that posted it — a message opens that conversation, chat head and all. On music, play/pause. |
+| **Double tap** | Nothing (so a single tap never has to wait for it) |
 | **Touch & hold** | Expand into the detail view, with the screen dimmed behind |
-| **Tap outside** | Collapse |
 | **Swipe ← / →** | Swap the two concurrent activities |
-| **Swipe ↓ / ↑** | Expand / collapse |
+
+Any of them can be reassigned in the app to open the app, expand, collapse,
+dismiss, swap, play/pause, next track, previous track, or nothing at all.
+Tapping outside always collapses.
+
+> Assignments are stored **by name**, not by position in a menu. A settings file
+> that silently remaps "open the app" to "play/pause" because a later version
+> inserted an action into the middle of a list is the kind of bug nobody thinks
+> to look for.
 
 In the demonstration, a drag that starts inside the phone belongs to the phone
 rather than scrolling the page. Swipe up from the bottom, or inward from either
 side edge, to close an open app.
+
+## The app: three tabs
+
+The control panel is one screen with three panes and a sliding indicator between
+them. Each pane press dips and lifts, so a tap is acknowledged before the pane
+has finished arriving.
+
+| Tab | What lives there |
+|---|---|
+| **Cards** | Everything the island *shows*: the two allow-lists with their **+** pickers, the notification-content switches, "show only on the island", and the gesture assignments. |
+| **Look** | Everything about how it *looks and moves* — with a live preview at the top that loops idle → compact → expanded using your current settings, so a dial's effect is visible before you leave the screen. |
+| **Settings** | Your name, the theme's own switches, the device readout, the support page, and the setup checklist. |
+
+### Look: the dials
+
+Position (`X`, `Y` offset), compact corner radius, expanded radius and width,
+idle scale, opacity at rest, border width, background and outline colour,
+shadow strength, animation speed, bounce, a reduce-animation switch, the glow,
+whether an arriving notification lands minimised or already expanded, and how
+long an alert stays up before it collapses itself.
+
+Each dial commits on release rather than on every pixel of the drag, so dragging
+one is cheap even while the overlay is live and redrawing behind the app.
+
+### Presets, with your own names
+
+Save the whole Look tab under a name — "Night", "Discreet", "Big and loud" — and
+switch between them in one tap. A preset stores the settings as JSON, so adding a
+new dial in a later version needs no migration: an unknown key is ignored and a
+missing one falls back to its default. Saving over an existing name replaces it
+instead of stacking a second copy.
+
+### Settings: the device readout
+
+RAM, storage and CPU, on the same card:
+
+- **RAM** — total, available, and what this app is actually using.
+- **Storage** — used and free on the data partition.
+- **CPU** — the chipset name, core count, and the share of wall-clock time this
+  process has spent on a core.
+
+That last figure is the app's own CPU use, not the system's. **A live
+system-wide CPU percentage is not readable by a normal app on Android 8 or
+later** — `/proc/stat` was restricted precisely so apps could not fingerprint
+the device that way. Anything showing you a system CPU meter without root is
+either a system app or making it up, so this shows the number it can actually
+measure and says which one it is.
+
+### Settings: support
+
+An offline page bundled inside the APK, opened in the demo process so it costs
+nothing while it is closed. It makes **no network requests at all** — no web
+fonts, no remote images — which is checked by a test, and matters for an app
+that declares no `INTERNET` permission and so could not load them anyway.
 
 ## Memory
 
@@ -186,7 +250,7 @@ system instead of leaving a fattened heap inside the process that hosts the over
 ## Install
 
 ```bash
-adb install -r dist/dcp-v2.5.0-release.apk
+adb install -r dist/dcp-v2.6.0-release.apk
 ```
 
 Every launchable file names its own version, so there is never any doubt about
@@ -194,9 +258,9 @@ which build is in front of you:
 
 | File | What it is | Size |
 |---|---|---|
-| `dcp-v2.5.0-release.apk` | The theme. **Install this.** | 141,972 bytes |
-| `dcp-v2.5.0-debug.apk` | Same app built unoptimised, signed with the Android debug key and installed as `com.dcp.punch.debug` under the name **DCP (debug)**. Only useful if you are attaching a debugger; it sits alongside the release build rather than replacing it. | 192,398 bytes |
-| `web/dynamic-camera-punch-v2.5.0.html` | The demonstration, openable in any browser. | — |
+| `dcp-v2.6.0-release.apk` | The theme. **Install this.** | 172,023 bytes |
+| `dcp-v2.6.0-debug.apk` | Same app built unoptimised, signed with the Android debug key and installed as `com.dcp.punch.debug` under the name **DCP (debug)**. Only useful if you are attaching a debugger; it sits alongside the release build rather than replacing it. | 238,413 bytes |
+| `web/dynamic-camera-punch-v2.6.0.html` | The demonstration, openable in any browser. | — |
 
 ### Check the download before you install it
 
@@ -206,15 +270,15 @@ corrupt. The size column above is the quickest tell — a few KB means you got a
 web page. To be certain:
 
 ```
-sha256  release  30184958ae29e949b7548b30e029f6691daa1f77340ecbcacb08db64d4b42e58
-sha256  debug    2a14a3776321b3835d9cc9df14ebc6ee86c98502f0b12f56225d083fb4ef83b0
+sha256  release  9e5a573ced2f4dc4cb729e4aa9d65fbb72c4d415f7a6749648591a01bec9c5cb
+sha256  debug    a8e7aebcbcce7c4765c00f304a95040277933be957997951e7ff906a5ea9efc7
 ```
 
 Both are signed with APK Signature Scheme v2 and verify with `apksigner verify`
 across the whole supported range, API 24 to 34.
 
 The version also appears in the app's own header, and in Android's app info as
-version 2.5.0 (code 8). See [CHANGELOG.md](CHANGELOG.md) for what changed.
+version 2.6.0 (code 9). See [CHANGELOG.md](CHANGELOG.md) for what changed.
 
 Then open the app and work down the setup list:
 
@@ -226,7 +290,7 @@ Then open the app and work down the setup list:
 3. **Show notifications** — Android requires an ongoing notification for a service
    that runs indefinitely. That notice is also how you turn the theme off.
 
-Minimum Android 7.0 (API 24). ~142 KB on disk, ~30–45 MB resident. No network access.
+Minimum Android 7.0 (API 24). ~168 KB on disk, ~30–45 MB resident. No network access.
 
 ## Permissions, and why each one is there
 
@@ -258,6 +322,7 @@ android/app/src/main/java/com/dcp/punch/
   data/
     Presentation.java         one thing the island can show
     Sources.java              the two allow-lists: kinds, and apps
+    Gestures.java             gesture → action, stored by name
     IslandStore.java          state: an alert over a stack of ≤2 activities
     DcpNotificationListener.java   real notifications → presentations
     MediaMonitor.java         MediaSession → live track + transport controls
@@ -267,13 +332,21 @@ android/app/src/main/java/com/dcp/punch/
     IslandView.java           the island, drawn on Canvas
   mem/
     MemoryBudget.java         the ceiling, the reserve, the trimmer, the measurement
+    Appearance.java           every look/motion dial, and the named presets
+    DeviceStats.java          RAM, storage, CPU — and what each can honestly report
     Prefs.java                persisted settings
   ui/
-    MainActivity.java         control panel
+    MainActivity.java         control panel: three panes, cross-faded
+    TabBar.java               the tab bar, its sliding pill and press states
+    SliderRow.java            one dial: label, value, track, grab halo
+    IslandPreview.java        the live idle → compact → expanded loop
     MemoryGaugeView.java      the speedometer, in the app rather than on the edge
+    StatBar.java              a device-stat row
     PickerActivity.java       the "+" picker: installed apps, and kinds of content
+    SupportActivity.java      the bundled offline support page
     DemoActivity.java         the WebView sandbox, in its own process
 
+android/app/src/main/assets/support/   the support page, offline, no requests
 web/                          the demonstration — also opens in any browser
 tools/                        Playwright/Pillow scripts that regenerate docs/
 ```

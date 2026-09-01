@@ -18,7 +18,7 @@
     <string name="grant">Grant</string>
     <string name="granted">Granted</string>
 
-    <string name="cutout_title">Cutout shape</string>
+    <string name="variant_title">Cutout shape</string>
     <string name="variant_a">Variant A</string>
     <string name="variant_a_desc">Fused to the top bezel</string>
     <string name="variant_b">Variant B</string>
@@ -93,6 +93,95 @@
     <string name="hide_off">Off — notifications stay in your notification shade as normal.</string>
     <string name="hide_warn">Two things to know before you turn this on. The brief banner at the top of the screen still appears: by the time any app is told about a notification the system has already posted it, and there is no way to suppress that. And clearing is the same as swiping it away — the notification is gone, not hidden, so if you miss the island you have missed it. Ongoing notifications are never touched.</string>
 
+    <string name="made_by_named">Made by %1$s  (I hate pirating :) )</string>
     <string name="made_by">Made by User (Elijah)  (I hate pirating :) )</string>
     <string name="made_with" translatable="false">HTML5 • CSS3 • vanilla ES6+ • zero dependencies</string>
+
+    <!-- ── Tabs ───────────────────────────────────────────────────── -->
+    <string name="tab_cards">Cards</string>
+    <string name="tab_look">Island</string>
+    <string name="tab_settings">Settings</string>
+
+    <!-- ── Gestures ───────────────────────────────────────────────── -->
+    <string name="gestures_title">Gestures</string>
+    <string name="gestures_desc">What each touch on the island does. Tap a row to change it.</string>
+    <string name="g_tap">Single tap</string>
+    <string name="g_double_tap">Double tap</string>
+    <string name="g_long_press">Long press</string>
+    <string name="g_swipe_left">Swipe left</string>
+    <string name="g_swipe_right">Swipe right</string>
+    <string name="ga_nothing">Nothing</string>
+    <string name="ga_open_app">Open the app</string>
+    <string name="ga_expand">Expand</string>
+    <string name="ga_collapse">Collapse</string>
+    <string name="ga_dismiss">Dismiss</string>
+    <string name="ga_swap">Swap cards</string>
+    <string name="ga_play_pause">Play / pause</string>
+    <string name="ga_next">Next track</string>
+    <string name="ga_previous">Previous track</string>
+
+    <!-- ── Look ───────────────────────────────────────────────────── -->
+    <string name="look_title">Island</string>
+    <string name="look_desc">Size, position, colour and movement. The preview below runs on whatever you set.</string>
+    <string name="look_geometry">Size and position</string>
+    <string name="look_surface">Surface</string>
+    <string name="look_motion">Movement</string>
+    <string name="look_notif">Notifications</string>
+    <string name="look_reset">Reset everything to defaults</string>
+
+    <string name="d_offset_x">Horizontal offset</string>
+    <string name="d_offset_y">Vertical offset</string>
+    <string name="d_idle_scale">Resting size</string>
+    <string name="d_corner_radius">Corner radius</string>
+    <string name="d_exp_radius">Expanded radius</string>
+    <string name="d_exp_width">Expanded width</string>
+    <string name="d_collapsed_alpha">Resting opacity</string>
+    <string name="d_border_width">Border width</string>
+    <string name="d_shadow_alpha">Shadow</string>
+    <string name="d_anim_speed">Animation speed</string>
+    <string name="d_bounce">Bounce</string>
+    <string name="d_auto_hide">Auto-hide delay</string>
+
+    <string name="bounce_0">None</string>
+    <string name="bounce_1">Normal</string>
+    <string name="bounce_2">High</string>
+    <string name="bounce_3">Highest</string>
+    <string name="autohide_never">Until opened</string>
+
+    <string name="reduce_anim_title">Reduce animations</string>
+    <string name="reduce_anim_desc">Snap between states instead of morphing. Helps on older devices.</string>
+    <string name="glow_title">Glow effect</string>
+    <string name="glow_desc">A soft halo around the island in the notification\'s own accent colour.</string>
+    <string name="notif_mode_0">Minimised</string>
+    <string name="notif_mode_1">Expanded</string>
+
+    <string name="colour_background">Background</string>
+    <string name="colour_outline">Outline</string>
+
+    <string name="presets_title">Presets</string>
+    <string name="presets_desc">Save everything on this tab under a name, and switch between looks in one tap.</string>
+    <string name="presets_hint">Name this look</string>
+    <string name="presets_save">Save</string>
+    <string name="presets_none">No presets yet. Name one above and tap Save.</string>
+    <string name="presets_applied">Applied</string>
+    <string name="presets_saved">Saved</string>
+
+    <!-- ── Settings ───────────────────────────────────────────────── -->
+    <string name="name_title">Your name</string>
+    <string name="name_desc">Shown at the bottom of this app. Nothing is sent anywhere — the app has no internet permission at all.</string>
+    <string name="name_hint">Your name</string>
+
+    <string name="device_title">This device</string>
+    <string name="device_refresh">Refresh</string>
+    <string name="device_note">Storage is what this app can see, which on a device with a memory card or several users is not the whole disk. A live system-wide CPU percentage is not readable by ordinary apps on Android 8 and later, so what is shown is this app\'s own processor time — the honest figure.</string>
+    <string name="stat_ram">Memory</string>
+    <string name="stat_storage">Storage</string>
+    <string name="stat_cpu">Processor</string>
+    <string name="stat_cpu_own">This app\'s processor time</string>
+    <string name="stat_free">%1$s free</string>
+    <string name="stat_cores">%1$d cores · %2$s · %3$s</string>
+
+    <string name="support_title">Support</string>
+    <string name="support_desc">If this is useful to you and you would like to chip in. Opens a page inside the app — there is no internet connection involved, and no payment is taken here.</string>
+    <string name="support_open">Open the support page</string>
 </resources>

@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Tab one: what the island shows, and what your gestures do.
+
+  Order follows what has to be true before the next thing matters — the theme
+  has to be on, then permissions granted, then there is any point choosing
+  content for it.
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/pane_cards"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:scrollbars="none">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="18dp"
+        android:paddingEnd="18dp"
+        android:paddingTop="26dp"
+        android:paddingBottom="26dp">
+
+        <!-- ── Header ─────────────────────────────────────────────── -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingBottom="18dp">
+
+            <ImageView
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:src="@mipmap/ic_launcher"
+                android:contentDescription="@null" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:layout_marginStart="12dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/app_name"
+                    android:textColor="@color/text"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tagline"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/tagline"
+                    android:textColor="@color/text_dim"
+                    android:textSize="12.5sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ── Master switch ──────────────────────────────────────── -->
+        <LinearLayout
+            style="@style/Card"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView style="@style/CardTitle" android:text="@string/theme_title" />
+
+                <TextView
+                    android:id="@+id/theme_status"
+                    style="@style/CardBody"
+                    android:text="@string/theme_off" />
+            </LinearLayout>
+
+            <Switch
+                android:id="@+id/theme_switch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:minWidth="0dp"
+                android:minHeight="0dp" />
+        </LinearLayout>
+
+        <!-- ── Permissions ────────────────────────────────────────── -->
+        <LinearLayout style="@style/Card" android:orientation="vertical">
+
+            <TextView style="@style/CardTitle" android:text="@string/setup_title" />
+
+            <include layout="@layout/row_permission" android:id="@+id/row_overlay" />
+            <include layout="@layout/row_permission" android:id="@+id/row_listener" />
+            <include layout="@layout/row_permission" android:id="@+id/row_post" />
+        </LinearLayout>
+
+        <!-- ── What the island shows ──────────────────────────────── -->
+        <LinearLayout style="@style/Card" android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    style="@style/CardTitle"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:text="@string/sources_title" />
+
+                <TextView
+                    android:id="@+id/functions_add"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_pill"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:paddingTop="7dp"
+                    android:paddingBottom="7dp"
+                    android:text="@string/add_plus"
+                    android:textColor="@color/accent"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/functions_desc"
+                style="@style/CardBody"
+                android:layout_marginTop="4dp" />
+
+            <LinearLayout
+                android:id="@+id/sources_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="6dp" />
+        </LinearLayout>
+
+        <!-- ── Apps ───────────────────────────────────────────────── -->
+        <LinearLayout style="@style/Card" android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    style="@style/CardTitle"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:text="@string/apps_title" />
+
+                <TextView
+                    android:id="@+id/apps_add"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_pill"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="16dp"
+                    android:paddingTop="7dp"
+                    android:paddingBottom="7dp"
+                    android:text="@string/add_plus"
+                    android:textColor="@color/accent"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/apps_desc"
+                style="@style/CardBody"
+                android:layout_marginTop="4dp" />
+
+            <LinearLayout
+                android:id="@+id/apps_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="6dp" />
+        </LinearLayout>
+
+        <!-- ── Gestures ───────────────────────────────────────────── -->
+        <LinearLayout style="@style/Card" android:orientation="vertical">
+
+            <TextView style="@style/CardTitle" android:text="@string/gestures_title" />
+            <TextView style="@style/CardBody" android:text="@string/gestures_desc" />
+
+            <LinearLayout
+                android:id="@+id/gestures_list"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="8dp" />
+        </LinearLayout>
+    </LinearLayout>
+</ScrollView>

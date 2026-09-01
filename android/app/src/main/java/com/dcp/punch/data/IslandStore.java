@@ -1,7 +1,10 @@
 package com.dcp.punch.data;
 
+import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
+
+import com.dcp.punch.mem.Appearance;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +31,22 @@ public class IslandStore {
 
     private final Handler main = new Handler(Looper.getMainLooper());
     private Listener listener;
+
+    /**
+     * Application context, only ever used to read settings. Held because the
+     * store outlives every activity and service that touches it; an activity
+     * context here would be a leak.
+     */
+    private Context ctx;
+
+    public void attach(Context c) {
+        if (ctx == null && c != null) ctx = c.getApplicationContext();
+    }
+
+    /** True when the user asked for arriving notifications to open themselves. */
+    private boolean arriveExpanded() {
+        return ctx != null && Appearance.get(ctx).get(Appearance.NOTIF_MODE) == 1;
+    }
 
     /** Sweeps expired alerts. Only runs while an alert is actually up. */
     private final Runnable expiryTick = new Runnable() {
@@ -68,7 +87,7 @@ public class IslandStore {
 
         if (p.kind == Presentation.Kind.ALERT) {
             alert = p;
-            expanded = false;
+            expanded = arriveExpanded();
             main.removeCallbacks(expiryTick);
             main.postDelayed(expiryTick, 200L);
             notifyChanged(true);

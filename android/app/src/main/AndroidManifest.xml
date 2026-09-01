@@ -103,6 +103,17 @@
             android:label="@string/picker_apps_title"
             android:theme="@style/Theme.Dcp" />
 
+        <!-- The support page: a bundled, offline HTML page. Shares the :demo
+             process with the demonstration, because both are WebViews and the
+             two are never open at once. -->
+        <activity
+            android:name=".ui.SupportActivity"
+            android:exported="false"
+            android:process=":demo"
+            android:label="@string/support_title"
+            android:theme="@style/Theme.Dcp"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|density|uiMode|fontScale" />
+
         <!--
           The live demonstration: the original WebView sandbox. It is a separate
           process on purpose. A WebView costs ~60-90 MB, and running it in its own

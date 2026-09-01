@@ -6,11 +6,16 @@ Two things ship here: the **APK** and everything that produces it.
 
 | File | Size | Notes |
 |---|---|---|
-| `dist/dcp-v2.5.0-release.apk` | 141,972 B | Minified, resource-shrunk, signed with the project key. Install this one. |
-| `dist/dcp-v2.5.0-debug.apk` | 192,398 B | Unoptimised and debug-signed. `applicationId` is suffixed `.debug` and the custom permission is named after it, so it genuinely installs alongside the release build instead of colliding with it. Labelled **DCP (debug)** on the launcher. |
+| `dist/dcp-v2.6.0-release.apk` | 172,023 B | Minified, resource-shrunk, signed with the project key. Install this one. |
+| `dist/dcp-v2.6.0-debug.apk` | 238,413 B | Unoptimised and debug-signed. `applicationId` is suffixed `.debug` and the custom permission is named after it, so it genuinely installs alongside the release build instead of colliding with it. Labelled **DCP (debug)** on the launcher. |
+
+```
+sha256  release  9e5a573ced2f4dc4cb729e4aa9d65fbb72c4d415f7a6749648591a01bec9c5cb
+sha256  debug    a8e7aebcbcce7c4765c00f304a95040277933be957997951e7ff906a5ea9efc7
+```
 
 ```bash
-adb install -r dist/dcp-v2.5.0-release.apk
+adb install -r dist/dcp-v2.6.0-release.apk
 ```
 
 Package `com.dcp.punch` · minSdk 24 (Android 7.0) · targetSdk 34 · no network access.
@@ -26,28 +31,32 @@ produced from a source file in this package:
 
 | Inside the APK | Comes from |
 |---|---|
-| `assets/web/**` — the live demonstration: `dynamic-camera-punch-v2.5.0.html`, 4 CSS files, 6 JS files, `logo.svg` | `web/` — copied in verbatim by the `syncWebAssets` Gradle task |
-| `classes.dex` — the overlay service, the Canvas-drawn island, the memory gauge, the notification/media readers | `android/app/src/main/java/com/dcp/punch/**` (16 classes across `data/`, `overlay/`, `mem/`, `ui/`) |
+| `assets/web/**` — the live demonstration: `dynamic-camera-punch-v2.6.0.html`, 4 CSS files, 6 JS files, `logo.svg` | `web/` — copied in verbatim by the `syncWebAssets` Gradle task |
+| `assets/support/index.html` — the offline support page, opened from the Settings tab. Makes no network requests of any kind. | `android/app/src/main/assets/support/` |
+| `classes.dex` — the overlay service, the Canvas-drawn island, the three-tab control panel, the memory gauge, the notification/media readers | `android/app/src/main/java/com/dcp/punch/**` (24 classes across `data/`, `overlay/`, `mem/`, `ui/`) |
 | `AndroidManifest.xml` (binary) | `android/app/src/main/AndroidManifest.xml` |
 | `resources.arsc` + `res/**` — launcher icons, themes, colours, strings | `android/app/src/main/res/**` |
 | The APK Signing Block — a v2 signature, sitting between the entries and the central directory rather than in `META-INF/` (there is no v1 JAR signature) | `android/keystore/dcp-demo.jks` via `android/keystore.properties` |
 
 The APK carries **no libraries at all** — no AndroidX, no Kotlin runtime, no
-third-party code. The island is framework `View` + `Canvas` drawing, which is why
-a system-wide overlay plus a full web demo fits in 142 KB.
+third-party code. The island is framework `View` + `Canvas` drawing, and so are
+the tab bar, the sliders, the gauge and the live preview — which is why a
+system-wide overlay, a three-tab control panel, a support page and a full web
+demo fit in 168 KB.
 
 Verify any of this yourself:
 
 ```bash
-unzip -l dist/dcp-v2.5.0-release.apk
-apksigner verify --print-certs dist/dcp-v2.5.0-release.apk
+unzip -l dist/dcp-v2.6.0-release.apk
+apksigner verify --print-certs dist/dcp-v2.6.0-release.apk
 ```
 
 ## The sources
 
 ```
 android/     The theme itself: overlay service, Canvas island, memory gauge,
-             notification + media readers, control panel.
+             notification + media readers, the three-tab control panel and the
+             bundled support page.
 web/         The live demonstration. Also opens standalone in any browser —
              no build, no server, no dependencies.
 tools/       Playwright/Pillow scripts that regenerate everything in docs/.
@@ -86,10 +95,16 @@ keytool -genkeypair -keystore my.jks -alias mykey -keyalg RSA -keysize 2048 -val
   mode constant that does not exist below API 30 — plus per-frame object
   allocations in both custom views, which matter a great deal for a view that
   draws for as long as the theme is enabled.
-- APK contents verified: exactly six permissions (no speculative extras), all
-  components present, all 12 web asset files bundled, v2 signature verifies.
-- Web demo: all 14 alerts and 9 activities driven through compact **and** expanded
-  states in both cutout variants — no console or page errors.
+- APK contents verified: exactly six permissions (no speculative extras), no
+  `QUERY_ALL_PACKAGES` and no `INTERNET`, all four activities present, all 12 web
+  asset files plus the support page bundled, v2 signature verifies across API
+  24–34.
+- Web demo: 31 browser assertions, including every one of the 23 presentations
+  driven through compact **and** expanded states in both cutout variants with its
+  content measured for clipping, and both edge-swipe directions — no console or
+  page errors.
+- Support page: 9 assertions in a real browser, the first of which is that it
+  makes **no network requests at all**.
 - Geometry invariant in the web build: the camera lens sits **0.00 px** from the
   screen's centre line in every state of both variants. The overlay uses the same
   centre-anchored model.
