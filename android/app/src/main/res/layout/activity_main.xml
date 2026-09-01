@@ -12,22 +12,33 @@
     android:layout_height="match_parent"
     android:background="@color/app_background">
 
+    <!--
+      The panes fill the window rather than stopping above the tab bar: the bar
+      floats over them now, and each pane pads its own bottom so the last row
+      can still be scrolled clear of it. A list that runs under a floating
+      control reads as one surface; a list guillotined by a bar does not.
+    -->
     <FrameLayout
         android:id="@+id/pane_host"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_marginBottom="66dp">
+        android:layout_height="match_parent">
 
         <include layout="@layout/tab_cards" />
         <include layout="@layout/tab_look" />
         <include layout="@layout/tab_settings" />
     </FrameLayout>
 
-    <com.dcp.punch.ui.TabBar
-        android:id="@+id/tab_bar"
+    <!-- Detail screens are pushed in here, over the panes AND the tab bar. -->
+    <FrameLayout
+        android:id="@+id/screen_host"
         android:layout_width="match_parent"
-        android:layout_height="66dp"
-        android:layout_gravity="bottom" />
+        android:layout_height="match_parent" />
+
+    <com.dcp.punch.ui.FloatingTabBar
+        android:id="@+id/tab_bar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom|center_horizontal" />
 
     <!-- Capacity, floating above the Settings pane. Hidden on the other tabs;
          it describes the memory ceiling, which lives there. -->
@@ -37,7 +48,7 @@
         android:layout_height="wrap_content"
         android:layout_gravity="bottom|end"
         android:layout_marginEnd="16dp"
-        android:layout_marginBottom="78dp"
+        android:layout_marginBottom="100dp"
         android:orientation="vertical"
         android:gravity="end"
         android:visibility="gone">

@@ -6,16 +6,16 @@ Two things ship here: the **APK** and everything that produces it.
 
 | File | Size | Notes |
 |---|---|---|
-| `dist/dcp-v2.6.0-release.apk` | 172,023 B | Minified, resource-shrunk, signed with the project key. Install this one. |
-| `dist/dcp-v2.6.0-debug.apk` | 238,413 B | Unoptimised and debug-signed. `applicationId` is suffixed `.debug` and the custom permission is named after it, so it genuinely installs alongside the release build instead of colliding with it. Labelled **DCP (debug)** on the launcher. |
+| `dist/dcp-v2.7.0-release.apk` | 180,643 B | Minified, resource-shrunk, signed with the project key. Install this one. |
+| `dist/dcp-v2.7.0-debug.apk` | 256,410 B | Unoptimised and debug-signed. `applicationId` is suffixed `.debug` and the custom permission is named after it, so it genuinely installs alongside the release build instead of colliding with it. Labelled **DCP (debug)** on the launcher. |
 
 ```
-sha256  release  9e5a573ced2f4dc4cb729e4aa9d65fbb72c4d415f7a6749648591a01bec9c5cb
-sha256  debug    a8e7aebcbcce7c4765c00f304a95040277933be957997951e7ff906a5ea9efc7
+sha256  release  b39630eaff1a294c39a53bbafaacaf44b3b045e5c42e137776f5f0734581fd56
+sha256  debug    8e74b3b1bbc04ecb40ad21f116431ee49030b3898253544de564304d76018c69
 ```
 
 ```bash
-adb install -r dist/dcp-v2.6.0-release.apk
+adb install -r dist/dcp-v2.7.0-release.apk
 ```
 
 Package `com.dcp.punch` · minSdk 24 (Android 7.0) · targetSdk 34 · no network access.
@@ -31,24 +31,24 @@ produced from a source file in this package:
 
 | Inside the APK | Comes from |
 |---|---|
-| `assets/web/**` — the live demonstration: `dynamic-camera-punch-v2.6.0.html`, 4 CSS files, 6 JS files, `logo.svg` | `web/` — copied in verbatim by the `syncWebAssets` Gradle task |
+| `assets/web/**` — the live demonstration: `dynamic-camera-punch-v2.7.0.html`, 4 CSS files, 6 JS files, `logo.svg` | `web/` — copied in verbatim by the `syncWebAssets` Gradle task |
 | `assets/support/index.html` — the offline support page, opened from the Settings tab. Makes no network requests of any kind. | `android/app/src/main/assets/support/` |
-| `classes.dex` — the overlay service, the Canvas-drawn island, the three-tab control panel, the memory gauge, the notification/media readers | `android/app/src/main/java/com/dcp/punch/**` (24 classes across `data/`, `overlay/`, `mem/`, `ui/`) |
+| `classes.dex` — the overlay service, the Canvas-drawn island, the three-tab control panel, the memory gauge, the notification/media readers | `android/app/src/main/java/com/dcp/punch/**` (29 classes across `data/`, `overlay/`, `mem/`, `ui/`) |
 | `AndroidManifest.xml` (binary) | `android/app/src/main/AndroidManifest.xml` |
 | `resources.arsc` + `res/**` — launcher icons, themes, colours, strings | `android/app/src/main/res/**` |
 | The APK Signing Block — a v2 signature, sitting between the entries and the central directory rather than in `META-INF/` (there is no v1 JAR signature) | `android/keystore/dcp-demo.jks` via `android/keystore.properties` |
 
 The APK carries **no libraries at all** — no AndroidX, no Kotlin runtime, no
 third-party code. The island is framework `View` + `Canvas` drawing, and so are
-the tab bar, the sliders, the gauge and the live preview — which is why a
+the floating tab bar, the switches, every icon, the sliders, the gauge and the live preview — which is why a
 system-wide overlay, a three-tab control panel, a support page and a full web
-demo fit in 168 KB.
+demo fit in 176 KB.
 
 Verify any of this yourself:
 
 ```bash
-unzip -l dist/dcp-v2.6.0-release.apk
-apksigner verify --print-certs dist/dcp-v2.6.0-release.apk
+unzip -l dist/dcp-v2.7.0-release.apk
+apksigner verify --print-certs dist/dcp-v2.7.0-release.apk
 ```
 
 ## The sources
@@ -105,6 +105,10 @@ keytool -genkeypair -keystore my.jks -alias mykey -keyalg RSA -keysize 2048 -val
   page errors.
 - Support page: 9 assertions in a real browser, the first of which is that it
   makes **no network requests at all**.
+- Both suites run from `npm test`.
+- Every `findViewById` in the control panel audited against the layouts that are
+  actually inflated. v2.7.0 rewrote most of the UI, and a stale id after a
+  rewrite that size is a null at runtime rather than a compile error.
 - Geometry invariant in the web build: the camera lens sits **0.00 px** from the
   screen's centre line in every state of both variants. The overlay uses the same
   centre-anchored model.

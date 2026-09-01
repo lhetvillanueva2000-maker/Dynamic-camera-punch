@@ -18,12 +18,11 @@ import android.text.TextWatcher;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.EditText;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
-import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -45,42 +44,51 @@ import java.util.List;
  *
  *   Cards     what the island is allowed to show, and what your gestures do
  *   Island    how it looks and moves, with a live preview and named presets
- *   Settings  your name, what the device has, and everything else
+ *   Settings  you, this device, and everything else
  *
- * All three panes are inflated once and cross-faded, because a tab switch that
- * re-inflates is a stutter on exactly the low-end hardware this is meant to run
- * well on. The panes are small enough that keeping all three costs less than
- * rebuilding one.
+ * Two things shape this file.
+ *
+ * The panes are inflated once and cross-faded rather than swapped, because a
+ * tab switch that re-inflates is a stutter on exactly the low-end hardware this
+ * is meant to run well on. Keeping all three costs less than rebuilding one.
+ *
+ * And the rows are built in code from {@link Rows} rather than declared in
+ * layout XML. Twelve screens sharing six shapes is what makes the app look like
+ * one app; building them from one vocabulary is what stops that agreement from
+ * having to be maintained by hand across a dozen files.
  */
 public class MainActivity extends Activity {
 
     private static final int REQ_POST_NOTIFS = 10;
 
-    /* Cards tab */
-    private Switch themeSwitch;
-    private TextView themeStatus, functionsDesc, appsDesc;
-    private LinearLayout sourcesList, appsList, gesturesList;
-    private View rowOverlay, rowListener, rowPost;
+    /* Cards tab — built in code, so only its host and its live bits are held. */
+    private LinearLayout cardsBody;
+    private CheckSwitch themeSwitch;
+    private TextView themeStatus;
+    private TextView permOverlayState, permListenerState, permPostState;
 
     /* Island tab */
+    private LinearLayout lookBody, variantCard, colourRow, presetsList;
     private IslandPreview preview;
-    private TextView variantA, variantB, variantDesc;
-    private Switch reduceAnimSwitch, glowSwitch;
-    private LinearLayout dialsGeometry, dialsSurface, dialsMotion, dialsNotif,
-            colourRow, notifModeRow, presetsList;
-    private EditText presetName;
+    private CheckSwitch reduceAnimSwitch, glowSwitch;
 
     /* Settings tab */
-    private Switch bootSwitch, alwaysSwitch, autoSwitch, hideSwitch;
-    private TextView alwaysDesc, hideDesc, ramDetail, footerBy,
-            capacityButton, capacityBody, capacityNote, demoDesc;
+    private LinearLayout settingsBody, deviceStats, capacityRoot, capacityPanel;
+    private CheckSwitch bootSwitch, alwaysSwitch, autoSwitch;
+    private TextView alwaysDesc, ramDetail, footerBy, demoDesc, demoState,
+            capacityButton, capacityBody, capacityNote;
     private MemoryGaugeView ramGauge;
-    private LinearLayout deviceStats, capacityRoot, capacityPanel;
     private EditText userName;
-    private Button demoButton;
 
     private View[] panes;
-    private TabBar tabBar;
+    private FloatingTabBar tabBar;
+    private FrameLayout screenHost;
+    private Rows rows;
+
+    /** The detail screen currently on top, if any. Back closes it first. */
+    private SubScreen openScreen;
+    /** How to rebuild whatever is on top, for when its data changed underneath. */
+    private Runnable reopenScreen;
 
     private Prefs prefs;
     private Sources sources;
@@ -104,16 +112,13 @@ public class MainActivity extends Activity {
         memory = DcpApp.get().memory();
         device = new DeviceStats(this);
 
+        rows = new Rows(this);
+
         findViews();
         wireTabs();
-        wireCards();
-        wireLook();
-        wireSettings();
-
-        buildDials();
-        buildGestureRows();
-        buildColourSwatches();
-        buildNotifModeRow();
+        buildCardsTab();
+        buildLookTab();
+        buildSettingsTab();
     }
 
     private void findViews() {
@@ -123,46 +128,11 @@ public class MainActivity extends Activity {
                 findViewById(R.id.pane_settings)
         };
         tabBar = findViewById(R.id.tab_bar);
+        screenHost = findViewById(R.id.screen_host);
+        cardsBody = findViewById(R.id.cards_body);
+        lookBody = findViewById(R.id.look_body);
+        settingsBody = findViewById(R.id.settings_body);
 
-        themeSwitch = findViewById(R.id.theme_switch);
-        themeStatus = findViewById(R.id.theme_status);
-        functionsDesc = findViewById(R.id.functions_desc);
-        appsDesc = findViewById(R.id.apps_desc);
-        sourcesList = findViewById(R.id.sources_list);
-        appsList = findViewById(R.id.apps_list);
-        gesturesList = findViewById(R.id.gestures_list);
-        rowOverlay = findViewById(R.id.row_overlay);
-        rowListener = findViewById(R.id.row_listener);
-        rowPost = findViewById(R.id.row_post);
-
-        preview = findViewById(R.id.island_preview);
-        variantA = findViewById(R.id.variant_a);
-        variantB = findViewById(R.id.variant_b);
-        variantDesc = findViewById(R.id.variant_desc);
-        reduceAnimSwitch = findViewById(R.id.reduce_anim_switch);
-        glowSwitch = findViewById(R.id.glow_switch);
-        dialsGeometry = findViewById(R.id.dials_geometry);
-        dialsSurface = findViewById(R.id.dials_surface);
-        dialsMotion = findViewById(R.id.dials_motion);
-        dialsNotif = findViewById(R.id.dials_notif);
-        colourRow = findViewById(R.id.colour_row);
-        notifModeRow = findViewById(R.id.notif_mode_row);
-        presetsList = findViewById(R.id.presets_list);
-        presetName = findViewById(R.id.preset_name);
-
-        bootSwitch = findViewById(R.id.boot_switch);
-        alwaysSwitch = findViewById(R.id.always_switch);
-        autoSwitch = findViewById(R.id.auto_switch);
-        hideSwitch = findViewById(R.id.hide_switch);
-        alwaysDesc = findViewById(R.id.always_desc);
-        hideDesc = findViewById(R.id.hide_desc);
-        ramDetail = findViewById(R.id.ram_detail);
-        ramGauge = findViewById(R.id.ram_gauge);
-        deviceStats = findViewById(R.id.device_stats);
-        userName = findViewById(R.id.user_name);
-        footerBy = findViewById(R.id.footer_by);
-        demoDesc = findViewById(R.id.demo_desc);
-        demoButton = findViewById(R.id.demo_button);
         capacityRoot = findViewById(R.id.capacity_root);
         capacityPanel = findViewById(R.id.capacity_panel);
         capacityButton = findViewById(R.id.capacity_button);
@@ -180,7 +150,7 @@ public class MainActivity extends Activity {
             panes[i].setVisibility(View.GONE);
         }
         tabBar.setOnTabSelected(this::showPane);
-        tabBar.select(TabBar.TAB_CARDS, false);
+        tabBar.select(FloatingTabBar.TAB_CARDS, false);
     }
 
     /**
@@ -208,7 +178,7 @@ public class MainActivity extends Activity {
         }
 
         // Capacity describes the memory ceiling, which lives on Settings.
-        boolean showCapacity = index == TabBar.TAB_SETTINGS;
+        boolean showCapacity = index == FloatingTabBar.TAB_SETTINGS;
         capacityRoot.animate().cancel();
         if (showCapacity) {
             capacityRoot.setVisibility(View.VISIBLE);
@@ -219,38 +189,328 @@ public class MainActivity extends Activity {
                     .withEndAction(() -> capacityRoot.setVisibility(View.GONE)).start();
         }
 
-        if (index == TabBar.TAB_LOOK) preview.refresh();
+        if (index == FloatingTabBar.TAB_LOOK) preview.refresh();
     }
 
     /* ══════════════════════════════════════════════════════════════════
        CARDS TAB
        ═════════════════════════════════════════════════════════════════ */
 
-    private void wireCards() {
-        ((TextView) findViewById(R.id.tagline)).setText(
-                getString(R.string.tagline) + "  ·  v" + BuildConfig.VERSION_NAME);
+    /**
+     * The front door: a header, the master switch, setup, then one summary row
+     * per category.
+     *
+     * It used to be every switch in the app on one scroll — forty of them, in
+     * the order they happened to be written. Now the top level says what the
+     * island can do and each row opens the screen that decides the detail, which
+     * is the difference between a settings page you read and one you search.
+     */
+    private void buildCardsTab() {
+        cardsBody.removeAllViews();
 
-        themeSwitch.setOnCheckedChangeListener((b, checked) -> {
-            if (binding) return;
-            if (checked) enableTheme(); else disableTheme();
-        });
+        buildAppHeader();
+        buildMasterSwitch();
+        buildSetupCard();
 
-        findViewById(R.id.apps_add).setOnClickListener(v -> openPicker(PickerActivity.MODE_APPS));
-        findViewById(R.id.functions_add).setOnClickListener(
-                v -> openPicker(PickerActivity.MODE_FUNCTIONS));
+        rows.section(cardsBody, getString(R.string.cat_events), getString(R.string.guide),
+                () -> guide(R.string.cat_events, R.string.guide_events));
+        rows.chips(cardsBody,
+                new int[]{ Glyphs.BOLT, Glyphs.BATTERY_LOW, Glyphs.VIBRATE, Glyphs.HEADPHONES },
+                Rows.BLUE, this::openEventsScreen);
 
-        wirePermissionRow(rowOverlay, R.string.perm_overlay, R.string.perm_overlay_why,
-                v -> startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+        rows.section(cardsBody, getString(R.string.cat_cards), getString(R.string.guide),
+                () -> guide(R.string.cat_cards, R.string.guide_cards));
+        rows.chips(cardsBody,
+                new int[]{ Glyphs.PLAY, Glyphs.PHONE, Glyphs.TIMER, Glyphs.PROGRESS },
+                Rows.PINK, this::openLiveCardsScreen);
+
+        rows.section(cardsBody, getString(R.string.cat_gestures), getString(R.string.guide),
+                () -> guide(R.string.cat_gestures, R.string.guide_gestures));
+        rows.chips(cardsBody,
+                new int[]{ Glyphs.TAP, Glyphs.DOUBLE_TAP, Glyphs.LONG_PRESS, Glyphs.SWIPE_LEFT },
+                Rows.BLUE, this::openGesturesScreen);
+
+        rows.section(cardsBody, getString(R.string.cat_notifications), getString(R.string.guide),
+                () -> guide(R.string.cat_notifications, R.string.guide_notifications));
+        rows.nav(rows.card(cardsBody), Glyphs.BELL, Rows.PINK,
+                getString(R.string.cat_notifications),
+                getString(R.string.cat_notifications_desc),
+                this::openNotificationsScreen);
+    }
+
+    private void buildAppHeader() {
+        LinearLayout head = new LinearLayout(this);
+        head.setOrientation(LinearLayout.HORIZONTAL);
+        head.setGravity(Gravity.CENTER_VERTICAL);
+        head.setPadding(rows.px(6), rows.px(22), rows.px(6), rows.px(6));
+
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(R.mipmap.ic_launcher);
+        icon.setContentDescription(null);
+        head.addView(icon, new LinearLayout.LayoutParams(rows.px(42), rows.px(42)));
+
+        LinearLayout text = new LinearLayout(this);
+        text.setOrientation(LinearLayout.VERTICAL);
+
+        TextView name = new TextView(this);
+        name.setText(R.string.app_name);
+        name.setTextColor(getColor(R.color.text));
+        name.setTextSize(20f);
+        name.setTypeface(android.graphics.Typeface.create("sans-serif-medium",
+                android.graphics.Typeface.NORMAL));
+        text.addView(name);
+
+        TextView sub = new TextView(this);
+        sub.setText(getString(R.string.tagline_version,
+                getString(R.string.tagline), BuildConfig.VERSION_NAME));
+        sub.setTextColor(getColor(R.color.text_dim));
+        sub.setTextSize(12.5f);
+        text.addView(sub);
+
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        lp.leftMargin = rows.px(12);
+        head.addView(text, lp);
+
+        cardsBody.addView(head, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+    }
+
+    private void buildMasterSwitch() {
+        LinearLayout card = rows.card(cardsBody);
+        themeSwitch = rows.toggle(card, Glyphs.ISLAND, Rows.BLUE,
+                getString(R.string.theme_title), getString(R.string.theme_off),
+                IslandService.isRunning(),
+                (v, checked) -> {
+                    if (binding) return;
+                    if (checked) enableTheme(); else disableTheme();
+                });
+        // The subtitle of that row doubles as the live status line.
+        themeStatus = subtitleOf(card.getChildAt(0));
+    }
+
+    private void buildSetupCard() {
+        rows.section(cardsBody, getString(R.string.setup_title));
+        LinearLayout card = rows.card(cardsBody);
+
+        permOverlayState = rows.value(card, Glyphs.ISLAND, Rows.PLAIN,
+                getString(R.string.perm_overlay), getString(R.string.perm_overlay_why),
+                getString(R.string.grant),
+                () -> startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                         Uri.parse("package:" + getPackageName()))));
 
-        wirePermissionRow(rowListener, R.string.perm_notifications, R.string.perm_notifications_why,
-                v -> startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)));
+        permListenerState = rows.value(card, Glyphs.BELL, Rows.PLAIN,
+                getString(R.string.perm_notifications), getString(R.string.perm_notifications_why),
+                getString(R.string.grant),
+                () -> startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)));
 
-        wirePermissionRow(rowPost, R.string.perm_post, R.string.perm_post_why, v -> {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQ_POST_NOTIFS);
-            }
+        permPostState = rows.value(card, Glyphs.MESSAGE, Rows.PLAIN,
+                getString(R.string.perm_post), getString(R.string.perm_post_why),
+                getString(R.string.grant),
+                () -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        requestPermissions(
+                                new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQ_POST_NOTIFS);
+                    }
+                });
+    }
+
+    /** The second TextView inside a row's text column — its subtitle. */
+    private TextView subtitleOf(View row) {
+        LinearLayout text = (LinearLayout) ((LinearLayout) row).getChildAt(1);
+        return (TextView) text.getChildAt(1);
+    }
+
+    /** A category's explanation, as a dialog rather than a wall of body text. */
+    private void guide(int titleRes, int bodyRes) {
+        new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
+                .setTitle(titleRes)
+                .setMessage(bodyRes)
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
+    }
+
+    /* ── The detail screens ──────────────────────────────────────────── */
+
+    /**
+     * Show a detail screen. {@code rebuild} is how to draw it again from
+     * scratch, kept so a screen whose data changed while the picker was in
+     * front can be refreshed on the way back rather than showing a stale list.
+     */
+    private void push(SubScreen screen, Runnable rebuild) {
+        boolean replacing = openScreen != null;
+        if (replacing) openScreen.dismiss();
+        openScreen = screen;
+        reopenScreen = rebuild;
+        screen.present(screenHost, () -> {
+            if (openScreen == screen) { openScreen = null; reopenScreen = null; }
         });
+    }
+
+    private static final Sources.Source[] EVENT_SOURCES = {
+            Sources.Source.CHARGING, Sources.Source.BATTERY,
+            Sources.Source.RINGER, Sources.Source.HEADPHONES
+    };
+
+    private static final Sources.Source[] CARD_SOURCES = {
+            Sources.Source.MESSAGES, Sources.Source.MEDIA, Sources.Source.CALLS,
+            Sources.Source.TIMERS, Sources.Source.NAVIGATION,
+            Sources.Source.PROGRESS, Sources.Source.OTHER
+    };
+
+    private void openEventsScreen() {
+        push(new SubScreen(this, getString(R.string.cat_events), getString(R.string.guide),
+                () -> guide(R.string.cat_events, R.string.guide_events),
+                (body, r) -> {
+                    r.note(body, getString(R.string.events_note));
+                    for (Sources.Source s : EVENT_SOURCES) {
+                        sourceToggle(r, r.card(body), s, Rows.BLUE);
+                    }
+                }), this::openEventsScreen);
+    }
+
+    private void openLiveCardsScreen() {
+        push(new SubScreen(this, getString(R.string.cat_cards), getString(R.string.guide),
+                () -> guide(R.string.cat_cards, R.string.guide_cards),
+                (body, r) -> {
+                    r.note(body, getString(R.string.cards_note));
+                    for (Sources.Source s : CARD_SOURCES) {
+                        sourceToggle(r, r.card(body), s, Rows.PINK);
+                    }
+                }), this::openLiveCardsScreen);
+    }
+
+    private void sourceToggle(Rows r, ViewGroup card, Sources.Source s, int tint) {
+        r.toggle(card, glyphFor(s), tint, getString(labelResFor(s)), getString(descResFor(s)),
+                sources.isEnabled(s), (v, on) -> setSourceEnabled(s, on));
+    }
+
+    /**
+     * Turn one kind of content on or off.
+     *
+     * The stored list is an allow-list where EMPTY MEANS EVERYTHING, so the
+     * first thing switched off cannot simply be removed — the list would still
+     * be empty and the switch would spring back on. Switching one off while the
+     * list is empty therefore writes every other kind in first, which is the
+     * same state the user was already looking at, and only then removes this
+     * one.
+     */
+    private void setSourceEnabled(Sources.Source s, boolean on) {
+        if (on) {
+            sources.addFunction(s);
+        } else {
+            if (sources.functionsUnrestricted()) {
+                for (Sources.Source every : SOURCE_ORDER) sources.addFunction(every);
+            }
+            sources.removeFunction(s);
+        }
+        DcpApp.get().store().clear();
+    }
+
+    private void openGesturesScreen() {
+        push(new SubScreen(this, getString(R.string.cat_gestures), getString(R.string.guide),
+                () -> guide(R.string.cat_gestures, R.string.guide_gestures),
+                (body, r) -> {
+                    r.note(body, getString(R.string.gestures_desc));
+                    for (Gestures.Gesture g : Gestures.Gesture.values()) {
+                        LinearLayout card = r.card(body);
+                        final TextView[] holder = new TextView[1];
+                        holder[0] = r.value(card, glyphFor(g), Rows.BLUE,
+                                getString(gestureLabel(g)), getString(gestureHint(g)),
+                                getString(actionLabel(gestures.actionFor(g))),
+                                () -> pickAction(g, holder[0]));
+                    }
+                    r.caption(body, getString(R.string.gestures_stored_note));
+                }), this::openGesturesScreen);
+    }
+
+    private void openNotificationsScreen() {
+        push(new SubScreen(this, getString(R.string.cat_notifications), getString(R.string.guide),
+                () -> guide(R.string.cat_notifications, R.string.guide_notifications),
+                (body, r) -> {
+                    r.section(body, getString(R.string.notif_settings));
+                    LinearLayout settings = r.card(body);
+
+                    final TextView[] mode = new TextView[1];
+                    mode[0] = r.value(settings, Glyphs.CARDS, Rows.PINK,
+                            getString(R.string.notif_mode_title),
+                            getString(R.string.notif_mode_desc),
+                            getString(look.get(Appearance.NOTIF_MODE) == 1
+                                    ? R.string.notif_mode_1 : R.string.notif_mode_0),
+                            () -> pickNotifMode(mode[0]));
+
+                    final TextView[] hide = new TextView[1];
+                    hide[0] = r.value(settings, Glyphs.TIMER, Rows.PINK,
+                            getString(R.string.d_auto_hide),
+                            getString(R.string.auto_hide_desc),
+                            autoHideLabel(look.get(Appearance.AUTO_HIDE)),
+                            () -> pickAutoHide(hide[0]));
+
+                    r.toggle(settings, Glyphs.BELL, Rows.PINK,
+                            getString(R.string.hide_title), getString(R.string.hide_short),
+                            prefs.isHideFromShade(),
+                            (v, on) -> { prefs.setHideFromShade(on); bind(); });
+
+                    r.caption(body, getString(R.string.hide_limits));
+
+                    r.section(body, getString(R.string.apps_title), getString(R.string.add_plus),
+                            () -> openPicker(PickerActivity.MODE_APPS));
+
+                    if (sources.appsUnrestricted()) {
+                        r.note(body, getString(R.string.apps_all));
+                    } else {
+                        for (String pkg : sources.allowedApps()) {
+                            final String p = pkg;
+                            LinearLayout card = r.card(body);
+                            r.value(card, Glyphs.APPS, Rows.PLAIN, appLabel(p), p,
+                                    getString(R.string.remove), () -> {
+                                        sources.removeApp(p);
+                                        DcpApp.get().store().clear();
+                                        openNotificationsScreen();   // rebuild in place
+                                    });
+                        }
+                    }
+                }), this::openNotificationsScreen);
+    }
+
+    private String autoHideLabel(int seconds) {
+        return seconds <= 0 ? getString(R.string.auto_hide_never)
+                            : getString(R.string.auto_hide_seconds, seconds);
+    }
+
+    private static final int[] AUTO_HIDE_CHOICES = { 0, 2, 3, 5, 8, 10, 15, 20, 30 };
+
+    private void pickAutoHide(TextView label) {
+        CharSequence[] names = new CharSequence[AUTO_HIDE_CHOICES.length];
+        int current = 0;
+        for (int i = 0; i < AUTO_HIDE_CHOICES.length; i++) {
+            names[i] = autoHideLabel(AUTO_HIDE_CHOICES[i]);
+            if (AUTO_HIDE_CHOICES[i] == look.get(Appearance.AUTO_HIDE)) current = i;
+        }
+        new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
+                .setTitle(R.string.d_auto_hide)
+                .setSingleChoiceItems(names, current, (dialog, which) -> {
+                    look.set(Appearance.AUTO_HIDE, AUTO_HIDE_CHOICES[which]);
+                    label.setText(autoHideLabel(AUTO_HIDE_CHOICES[which]));
+                    afterLookChange();
+                    dialog.dismiss();
+                })
+                .show();
+    }
+
+    private void pickNotifMode(TextView label) {
+        CharSequence[] names = {
+                getString(R.string.notif_mode_0), getString(R.string.notif_mode_1)
+        };
+        new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
+                .setTitle(R.string.notif_mode_title)
+                .setSingleChoiceItems(names, look.get(Appearance.NOTIF_MODE), (dialog, which) -> {
+                    look.set(Appearance.NOTIF_MODE, which);
+                    label.setText(names[which]);
+                    afterLookChange();
+                    dialog.dismiss();
+                })
+                .show();
     }
 
     static final Sources.Source[] SOURCE_ORDER = {
@@ -281,73 +541,57 @@ public class MainActivity extends Activity {
                 .putExtra(PickerActivity.EXTRA_MODE, mode));
     }
 
-    private void buildFunctionRows() {
-        sourcesList.removeAllViews();
-        boolean unrestricted = sources.functionsUnrestricted();
-        functionsDesc.setText(unrestricted ? R.string.functions_all : R.string.functions_some);
-        if (unrestricted) return;
-
-        for (Sources.Source s : SOURCE_ORDER) {
-            if (!sources.allowedFunctionKeys().contains(s.key)) continue;
-            sourcesList.addView(pickedRow(getString(labelResFor(s)), null, () -> {
-                sources.removeFunction(s);
-                DcpApp.get().store().clear();
-                bind();
-            }));
+    /** The icon that stands for one kind of content, everywhere it appears. */
+    static int glyphFor(Sources.Source s) {
+        switch (s) {
+            case MESSAGES:   return Glyphs.MESSAGE;
+            case MEDIA:      return Glyphs.PLAY;
+            case CALLS:      return Glyphs.PHONE;
+            case TIMERS:     return Glyphs.TIMER;
+            case NAVIGATION: return Glyphs.NAVIGATION;
+            case PROGRESS:   return Glyphs.PROGRESS;
+            case CHARGING:   return Glyphs.BOLT;
+            case BATTERY:    return Glyphs.BATTERY_LOW;
+            case RINGER:     return Glyphs.VIBRATE;
+            case HEADPHONES: return Glyphs.HEADPHONES;
+            default:         return Glyphs.BELL;
         }
     }
 
-    private void buildAppRows() {
-        appsList.removeAllViews();
-        boolean unrestricted = sources.appsUnrestricted();
-        appsDesc.setText(unrestricted ? R.string.apps_all : R.string.apps_some);
-        if (unrestricted) return;
-
-        for (String pkg : sources.allowedApps()) {
-            final String p = pkg;
-            appsList.addView(pickedRow(appLabel(p), appIcon(p), () -> {
-                sources.removeApp(p);
-                DcpApp.get().store().clear();
-                bind();
-            }));
+    static int descResFor(Sources.Source s) {
+        switch (s) {
+            case MESSAGES:   return R.string.src_messages_desc;
+            case MEDIA:      return R.string.src_media_desc;
+            case CALLS:      return R.string.src_calls_desc;
+            case TIMERS:     return R.string.src_timers_desc;
+            case NAVIGATION: return R.string.src_navigation_desc;
+            case PROGRESS:   return R.string.src_progress_desc;
+            case CHARGING:   return R.string.src_charging_desc;
+            case BATTERY:    return R.string.src_battery_desc;
+            case RINGER:     return R.string.src_ringer_desc;
+            case HEADPHONES: return R.string.src_headphones_desc;
+            default:         return R.string.src_other_desc;
         }
     }
 
-    /** One row per gesture, opening a chooser for the action it performs. */
-    private void buildGestureRows() {
-        gesturesList.removeAllViews();
-        for (Gestures.Gesture g : Gestures.Gesture.values()) {
-            gesturesList.addView(gestureRow(g));
+    static int glyphFor(Gestures.Gesture g) {
+        switch (g) {
+            case TAP:        return Glyphs.TAP;
+            case DOUBLE_TAP: return Glyphs.DOUBLE_TAP;
+            case LONG_PRESS: return Glyphs.LONG_PRESS;
+            case SWIPE_LEFT: return Glyphs.SWIPE_LEFT;
+            default:         return Glyphs.SWIPE_RIGHT;
         }
     }
 
-    private View gestureRow(Gestures.Gesture g) {
-        float d = getResources().getDisplayMetrics().density;
-        LinearLayout row = new LinearLayout(this);
-        row.setOrientation(LinearLayout.HORIZONTAL);
-        row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(0, Math.round(9 * d), 0, Math.round(9 * d));
-
-        TextView name = new TextView(this);
-        name.setText(gestureLabel(g));
-        name.setTextColor(getColor(R.color.text));
-        name.setTextSize(14.5f);
-        row.addView(name, new LinearLayout.LayoutParams(0,
-                LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
-
-        TextView action = new TextView(this);
-        action.setTextSize(13f);
-        action.setTextColor(getColor(R.color.accent));
-        action.setBackgroundResource(R.drawable.bg_pill);
-        action.setPadding(Math.round(13 * d), Math.round(7 * d),
-                Math.round(13 * d), Math.round(7 * d));
-        action.setText(actionLabel(gestures.actionFor(g)));
-        row.addView(action);
-
-        View.OnClickListener choose = v -> pickAction(g, action);
-        row.setOnClickListener(choose);
-        action.setOnClickListener(choose);
-        return row;
+    static int gestureHint(Gestures.Gesture g) {
+        switch (g) {
+            case TAP:        return R.string.g_tap_hint;
+            case DOUBLE_TAP: return R.string.g_double_tap_hint;
+            case LONG_PRESS: return R.string.g_long_press_hint;
+            case SWIPE_LEFT: return R.string.g_swipe_left_hint;
+            default:         return R.string.g_swipe_right_hint;
+        }
     }
 
     private void pickAction(Gestures.Gesture g, TextView label) {
@@ -396,60 +640,137 @@ public class MainActivity extends Activity {
        ISLAND TAB
        ═════════════════════════════════════════════════════════════════ */
 
-    private void wireLook() {
-        variantA.setOnClickListener(v -> setVariant("a"));
-        variantB.setOnClickListener(v -> setVariant("b"));
+    /**
+     * Tab two, built in the same vocabulary as the other two: the live preview,
+     * then the shape, the surface, the motion, and your saved presets.
+     */
+    private void buildLookTab() {
+        lookBody.removeAllViews();
 
-        reduceAnimSwitch.setOnCheckedChangeListener((b, c) -> {
-            if (binding) return;
-            look.setFlag(Appearance.REDUCE_ANIM, c);
-            afterLookChange();
-        });
-        glowSwitch.setOnCheckedChangeListener((b, c) -> {
-            if (binding) return;
-            look.setFlag(Appearance.GLOW, c);
-            afterLookChange();
-        });
+        title(lookBody, getString(R.string.look_title), getString(R.string.look_sub));
 
-        findViewById(R.id.preset_save).setOnClickListener(v -> {
-            String name = presetName.getText().toString().trim();
-            if (name.isEmpty()) { presetName.requestFocus(); return; }
-            look.savePreset(name);
-            presetName.setText("");
-            Toast.makeText(this, R.string.presets_saved, Toast.LENGTH_SHORT).show();
-            buildPresetRows();
-        });
+        // The preview sits on its own card, unpadded, because it draws its own
+        // margins and a second set would shrink the island it is showing.
+        LinearLayout previewCard = rows.card(lookBody);
+        preview = new IslandPreview(this);
+        previewCard.addView(preview, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, rows.px(190)));
 
-        findViewById(R.id.look_reset).setOnClickListener(v -> {
-            look.resetAll();
-            bind();
-            buildDials();
-            afterLookChange();
-        });
+        rows.section(lookBody, getString(R.string.variant_title));
+        variantCard = rows.card(lookBody);
+        variantRow(variantCard, "a", Glyphs.PHONE_PORTRAIT,
+                R.string.variant_a, R.string.variant_a_desc);
+        variantRow(variantCard, "b", Glyphs.PHONE_LANDSCAPE,
+                R.string.variant_b, R.string.variant_b_desc);
+
+        rows.section(lookBody, getString(R.string.look_geometry));
+        LinearLayout geometry = rows.card(lookBody);
+        addDial(geometry, Appearance.OFFSET_X, R.string.d_offset_x);
+        addDial(geometry, Appearance.OFFSET_Y, R.string.d_offset_y);
+        addDial(geometry, Appearance.IDLE_SCALE, R.string.d_idle_scale);
+        addDial(geometry, Appearance.CORNER_RADIUS, R.string.d_corner_radius);
+        addDial(geometry, Appearance.EXP_RADIUS, R.string.d_exp_radius);
+        addDial(geometry, Appearance.EXP_WIDTH, R.string.d_exp_width);
+
+        rows.section(lookBody, getString(R.string.look_surface));
+        LinearLayout surface = rows.card(lookBody);
+        addDial(surface, Appearance.COLLAPSED_ALPHA, R.string.d_collapsed_alpha);
+        addDial(surface, Appearance.BORDER_WIDTH, R.string.d_border_width);
+        addDial(surface, Appearance.SHADOW_ALPHA, R.string.d_shadow_alpha);
+        colourRow = new LinearLayout(this);
+        colourRow.setOrientation(LinearLayout.VERTICAL);
+        colourRow.setPadding(rows.px(16), 0, rows.px(16), rows.px(6));
+        surface.addView(colourRow, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        rows.section(lookBody, getString(R.string.look_motion), getString(R.string.reset),
+                () -> {
+                    look.resetAll();
+                    buildLookTab();
+                    bind();
+                    afterLookChange();
+                });
+        LinearLayout motion = rows.card(lookBody);
+        addDial(motion, Appearance.ANIM_SPEED, R.string.d_anim_speed);
+        addDial(motion, Appearance.BOUNCE, R.string.d_bounce);
+        reduceAnimSwitch = rows.toggle(motion, Glyphs.BOUNCE, Rows.BLUE,
+                getString(R.string.reduce_anim_title), getString(R.string.reduce_anim_desc),
+                look.flag(Appearance.REDUCE_ANIM), (v, c) -> {
+                    if (binding) return;
+                    look.setFlag(Appearance.REDUCE_ANIM, c);
+                    afterLookChange();
+                });
+        glowSwitch = rows.toggle(motion, Glyphs.SPARKLE, Rows.BLUE,
+                getString(R.string.glow_title), getString(R.string.glow_desc),
+                look.flag(Appearance.GLOW), (v, c) -> {
+                    if (binding) return;
+                    look.setFlag(Appearance.GLOW, c);
+                    afterLookChange();
+                });
+
+        rows.section(lookBody, getString(R.string.presets_title), getString(R.string.presets_save),
+                this::promptSavePreset);
+        presetsList = rows.card(lookBody);
+
+        buildColourSwatches();
+        buildPresetRows();
     }
 
-    /** Every dial on the Island tab, grouped as the card layout expects. */
-    private void buildDials() {
-        dialsGeometry.removeAllViews();
-        dialsSurface.removeAllViews();
-        dialsMotion.removeAllViews();
-        dialsNotif.removeAllViews();
+    /** One cutout shape, shown as chosen or not. */
+    private void variantRow(ViewGroup card, String key, int glyph, int nameRes, int descRes) {
+        LinearLayout row = rows.plain(card, glyph, Rows.BLUE,
+                getString(nameRes), getString(descRes));
+        row.setTag(key);
 
-        addDial(dialsGeometry, Appearance.OFFSET_X, R.string.d_offset_x);
-        addDial(dialsGeometry, Appearance.OFFSET_Y, R.string.d_offset_y);
-        addDial(dialsGeometry, Appearance.IDLE_SCALE, R.string.d_idle_scale);
-        addDial(dialsGeometry, Appearance.CORNER_RADIUS, R.string.d_corner_radius);
-        addDial(dialsGeometry, Appearance.EXP_RADIUS, R.string.d_exp_radius);
-        addDial(dialsGeometry, Appearance.EXP_WIDTH, R.string.d_exp_width);
+        CheckSwitch pick = new CheckSwitch(this);
+        pick.bind(key.equals(prefs.getVariant()));
+        // Choosing one is what deselects the other, so this switch only ever
+        // turns on: flipping it off would leave the island with no shape.
+        pick.setOnChanged((v, on) -> {
+            if (binding) return;
+            if (on) setVariant(key); else pick.bind(true);
+        });
+        row.addView(pick);
+        row.setBackground(rows.ripple(0));
+        row.setOnClickListener(v -> setVariant(key));
+    }
 
-        addDial(dialsSurface, Appearance.COLLAPSED_ALPHA, R.string.d_collapsed_alpha);
-        addDial(dialsSurface, Appearance.BORDER_WIDTH, R.string.d_border_width);
-        addDial(dialsSurface, Appearance.SHADOW_ALPHA, R.string.d_shadow_alpha);
+    /** Reflect the chosen shape across both rows. */
+    private void bindVariant() {
+        if (variantCard == null) return;
+        String chosen = prefs.getVariant();
+        for (int i = 0; i < variantCard.getChildCount(); i++) {
+            View row = variantCard.getChildAt(i);
+            Object tag = row.getTag();
+            if (!(tag instanceof String)) continue;
+            View last = ((LinearLayout) row).getChildAt(((LinearLayout) row).getChildCount() - 1);
+            if (last instanceof CheckSwitch) ((CheckSwitch) last).bind(tag.equals(chosen));
+            row.setAlpha(tag.equals(chosen) ? 1f : 0.62f);
+        }
+    }
 
-        addDial(dialsMotion, Appearance.ANIM_SPEED, R.string.d_anim_speed);
-        addDial(dialsMotion, Appearance.BOUNCE, R.string.d_bounce);
+    private void promptSavePreset() {
+        final EditText field = new EditText(this);
+        field.setHint(R.string.presets_hint);
+        field.setTextColor(getColor(R.color.text));
+        field.setHintTextColor(getColor(R.color.text_faint));
+        field.setSingleLine(true);
+        int pad = rows.px(22);
+        field.setPadding(pad, rows.px(12), pad, rows.px(12));
 
-        addDial(dialsNotif, Appearance.AUTO_HIDE, R.string.d_auto_hide);
+        new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
+                .setTitle(R.string.presets_save)
+                .setMessage(R.string.presets_prompt)
+                .setView(field)
+                .setPositiveButton(android.R.string.ok, (d, w) -> {
+                    String name = field.getText().toString().trim();
+                    if (name.isEmpty()) return;
+                    look.savePreset(name);
+                    buildPresetRows();
+                    Toast.makeText(this, R.string.presets_saved, Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     private void addDial(ViewGroup into, String key, int titleRes) {
@@ -561,34 +882,6 @@ public class MainActivity extends Activity {
         return g;
     }
 
-    private void buildNotifModeRow() {
-        notifModeRow.removeAllViews();
-        notifModeRow.addView(modeChip(getString(R.string.notif_mode_0), 0));
-        notifModeRow.addView(modeChip(getString(R.string.notif_mode_1), 1));
-    }
-
-    private View modeChip(String label, int mode) {
-        float d = getResources().getDisplayMetrics().density;
-        TextView chip = new TextView(this);
-        chip.setText(label);
-        chip.setGravity(Gravity.CENTER);
-        chip.setTextSize(14f);
-        chip.setTextColor(getColor(R.color.text));
-        chip.setPadding(0, Math.round(12 * d), 0, Math.round(12 * d));
-        chip.setBackgroundResource(look.get(Appearance.NOTIF_MODE) == mode
-                ? R.drawable.bg_pill_active : R.drawable.bg_pill);
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        if (mode == 0) lp.rightMargin = Math.round(8 * d);
-        chip.setLayoutParams(lp);
-        chip.setOnClickListener(v -> {
-            look.set(Appearance.NOTIF_MODE, mode);
-            buildNotifModeRow();
-            afterLookChange();
-        });
-        return chip;
-    }
-
     private void buildPresetRows() {
         presetsList.removeAllViews();
         List<String> names = look.presetNames();
@@ -602,15 +895,13 @@ public class MainActivity extends Activity {
         }
         for (String name : names) {
             final String n = name;
-            presetsList.addView(pickedRow(n, null, () -> {
+            presetsList.addView(pickedRow(n, () -> {
                 look.deletePreset(n);
                 buildPresetRows();
             }, () -> {
                 if (look.applyPreset(n)) {
+                    buildLookTab();
                     bind();
-                    buildDials();
-                    buildColourSwatches();
-                    buildNotifModeRow();
                     afterLookChange();
                     Toast.makeText(this, R.string.presets_applied, Toast.LENGTH_SHORT).show();
                 }
@@ -628,7 +919,7 @@ public class MainActivity extends Activity {
         prefs.setVariant(v);
         if (IslandService.isRunning()) {
             IslandService.stop(this);
-            variantA.postDelayed(() -> IslandService.start(this), 220);
+            tabBar.postDelayed(() -> IslandService.start(this), 220);
         }
         bind();
         preview.refresh();
@@ -638,49 +929,121 @@ public class MainActivity extends Activity {
        SETTINGS TAB
        ═════════════════════════════════════════════════════════════════ */
 
-    private void wireSettings() {
-        bootSwitch.setOnCheckedChangeListener((b, checked) -> {
-            if (!binding) prefs.setStartOnBoot(checked);
-        });
+    /**
+     * Tab three: you, the island's own behaviour, this device, and the extras.
+     *
+     * The memory gauge and the device stats are custom views dropped into
+     * ordinary cards, so they sit in the same rhythm as every other row rather
+     * than being a differently-shaped panel bolted on.
+     */
+    private void buildSettingsTab() {
+        settingsBody.removeAllViews();
 
-        alwaysSwitch.setOnCheckedChangeListener((b, checked) -> {
-            if (binding) return;
-            prefs.setAlwaysVisible(checked);
-            IslandService.refresh(this);
-            bind();
-        });
+        title(settingsBody, getString(R.string.settings_title), null);
 
-        autoSwitch.setOnCheckedChangeListener((b, checked) -> {
-            if (binding) return;
-            memory.setAutoManage(checked);
-            bind();
+        rows.section(settingsBody, getString(R.string.you_title));
+        LinearLayout you = rows.card(settingsBody);
+        LinearLayout nameRow = rows.plain(you, Glyphs.PERSON, Rows.BLUE,
+                getString(R.string.name_title), getString(R.string.name_desc));
+        userName = new EditText(this);
+        userName.setHint(R.string.name_hint);
+        userName.setText(prefs.getUserName());
+        userName.setTextColor(getColor(R.color.text));
+        userName.setHintTextColor(getColor(R.color.text_faint));
+        userName.setTextSize(15f);
+        userName.setSingleLine(true);
+        userName.setBackground(null);
+        userName.setGravity(Gravity.END);
+        userName.setMinWidth(rows.px(110));
+        userName.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
+            @Override public void onTextChanged(CharSequence s, int a, int b, int c) { }
+            @Override public void afterTextChanged(Editable e) {
+                if (binding) return;
+                prefs.setUserName(e.toString());
+                paintFooter();
+            }
         });
+        nameRow.addView(userName);
 
-        hideSwitch.setOnCheckedChangeListener((b, checked) -> {
-            if (binding) return;
-            prefs.setHideFromShade(checked);
-            bind();
-        });
+        rows.section(settingsBody, getString(R.string.behaviour_title));
+        LinearLayout behaviour = rows.card(settingsBody);
+        alwaysSwitch = rows.toggle(behaviour, Glyphs.ISLAND, Rows.BLUE,
+                getString(R.string.always_title), getString(R.string.always_short),
+                prefs.isAlwaysVisible(), (v, checked) -> {
+                    if (binding) return;
+                    prefs.setAlwaysVisible(checked);
+                    IslandService.refresh(this);
+                    bind();
+                });
+        alwaysDesc = subtitleOf(behaviour.getChildAt(0));
 
+        bootSwitch = rows.toggle(behaviour, Glyphs.BOLT, Rows.BLUE,
+                getString(R.string.boot_title), getString(R.string.boot_desc),
+                prefs.isStartOnBoot(), (v, checked) -> {
+                    if (!binding) prefs.setStartOnBoot(checked);
+                });
+
+        rows.section(settingsBody, getString(R.string.ram_title));
+        LinearLayout mem = rows.card(settingsBody);
+        ramGauge = new MemoryGaugeView(this);
         ramGauge.bind(memory, bytes -> {
             memory.setBudgetBytes(bytes);
             bind();
         });
+        mem.addView(ramGauge, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, rows.px(200)));
 
-        userName.addTextChangedListener(new TextWatcher() {
-            @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
-            @Override public void onTextChanged(CharSequence s, int a, int b, int c) { }
-            @Override public void afterTextChanged(Editable s) {
-                if (binding) return;
-                prefs.setUserName(s.toString());
-                paintFooter();
-            }
-        });
+        ramDetail = new TextView(this);
+        ramDetail.setTextColor(getColor(R.color.text_dim));
+        ramDetail.setTextSize(12.5f);
+        ramDetail.setLineSpacing(0f, 1.3f);
+        ramDetail.setPadding(rows.px(18), 0, rows.px(18), rows.px(12));
+        mem.addView(ramDetail);
 
-        findViewById(R.id.device_refresh).setOnClickListener(v -> buildDeviceStats());
+        autoSwitch = rows.toggle(mem, Glyphs.MEMORY, Rows.BLUE,
+                getString(R.string.auto_title), getString(R.string.auto_desc),
+                memory.isAutoManage(), (v, checked) -> {
+                    if (binding) return;
+                    memory.setAutoManage(checked);
+                    bind();
+                });
+        rows.caption(settingsBody, getString(R.string.ram_honest));
 
-        findViewById(R.id.support_button).setOnClickListener(v ->
-                startActivity(new Intent(this, SupportActivity.class)));
+        rows.section(settingsBody, getString(R.string.device_title), getString(R.string.refresh),
+                this::buildDeviceStats);
+        LinearLayout deviceCard = rows.card(settingsBody);
+        deviceStats = new LinearLayout(this);
+        deviceStats.setOrientation(LinearLayout.VERTICAL);
+        deviceStats.setPadding(rows.px(18), rows.px(16), rows.px(18), rows.px(6));
+        deviceCard.addView(deviceStats, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        rows.caption(settingsBody, getString(R.string.cpu_honest));
+
+        rows.section(settingsBody, getString(R.string.extras_title));
+        LinearLayout extras = rows.card(settingsBody);
+        demoState = rows.value(extras, Glyphs.APPS, Rows.PINK,
+                getString(R.string.demo_title), getString(R.string.demo_desc),
+                getString(R.string.demo_open), () -> {
+                    if (IslandService.isRunning()) {
+                        Toast.makeText(this, R.string.demo_blocked, Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    startActivity(new Intent(this, DemoActivity.class));
+                });
+        demoDesc = subtitleOf(extras.getChildAt(0));
+
+        rows.nav(extras, Glyphs.HEART, Rows.PINK,
+                getString(R.string.support_title), getString(R.string.support_desc_short),
+                () -> startActivity(new Intent(this, SupportActivity.class)));
+
+        rows.nav(extras, Glyphs.SHIELD, Rows.PLAIN,
+                getString(R.string.about_title),
+                getString(R.string.about_desc, BuildConfig.VERSION_NAME),
+                () -> guide(R.string.about_title, R.string.about_body));
+
+        footerBy = rows.caption(settingsBody, getString(R.string.made_by));
+        rows.caption(settingsBody, getString(R.string.made_with));
 
         capacityButton.setOnClickListener(v -> {
             boolean open = capacityPanel.getVisibility() == View.VISIBLE;
@@ -694,13 +1057,38 @@ public class MainActivity extends Activity {
             }
         });
 
-        demoButton.setOnClickListener(v -> {
-            if (IslandService.isRunning()) {
-                Toast.makeText(this, R.string.demo_blocked, Toast.LENGTH_LONG).show();
-                return;
-            }
-            startActivity(new Intent(this, DemoActivity.class));
-        });
+        buildDeviceStats();
+        paintFooter();
+    }
+
+    /** A screen's own large title, above its first section. */
+    private void title(ViewGroup parent, CharSequence text, CharSequence sub) {
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(rows.px(6), rows.px(24), rows.px(6), rows.px(2));
+
+        TextView t = new TextView(this);
+        t.setText(text);
+        t.setTextColor(getColor(R.color.text));
+        t.setTextSize(24f);
+        t.setTypeface(android.graphics.Typeface.create("sans-serif-medium",
+                android.graphics.Typeface.NORMAL));
+        box.addView(t);
+
+        if (sub != null) {
+            TextView s2 = new TextView(this);
+            s2.setText(sub);
+            s2.setTextColor(getColor(R.color.text_dim));
+            s2.setTextSize(13f);
+            s2.setLineSpacing(0f, 1.25f);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            lp.topMargin = rows.px(3);
+            box.addView(s2, lp);
+        }
+
+        parent.addView(box, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
     }
 
     private void buildDeviceStats() {
@@ -775,39 +1163,33 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         bind();
-        buildFunctionRows();
-        buildAppRows();
         buildPresetRows();
         buildDeviceStats();
+        // A screen left open while the picker was in front is now stale — the
+        // app list it drew may have gained an entry.
+        if (reopenScreen != null) reopenScreen.run();
     }
 
     private void bind() {
         binding = true;
 
         boolean running = IslandService.isRunning();
-        themeSwitch.setChecked(running);
+        themeSwitch.bind(running);
         themeStatus.setText(running ? R.string.theme_on : R.string.theme_off);
 
-        setPermissionState(rowOverlay, DcpApp.canDrawOverlay(this));
-        setPermissionState(rowListener, DcpApp.hasNotificationAccess(this));
-        setPermissionState(rowPost, hasPostNotifications());
+        setPermissionState(permOverlayState, DcpApp.canDrawOverlay(this));
+        setPermissionState(permListenerState, DcpApp.hasNotificationAccess(this));
+        setPermissionState(permPostState, hasPostNotifications());
 
-        String variant = prefs.getVariant();
-        variantA.setBackgroundResource("a".equals(variant)
-                ? R.drawable.bg_pill_active : R.drawable.bg_pill);
-        variantB.setBackgroundResource("b".equals(variant)
-                ? R.drawable.bg_pill_active : R.drawable.bg_pill);
-        variantDesc.setText("a".equals(variant) ? R.string.variant_a_desc : R.string.variant_b_desc);
+        bindVariant();
 
-        reduceAnimSwitch.setChecked(look.flag(Appearance.REDUCE_ANIM));
-        glowSwitch.setChecked(look.flag(Appearance.GLOW));
+        reduceAnimSwitch.bind(look.flag(Appearance.REDUCE_ANIM));
+        glowSwitch.bind(look.flag(Appearance.GLOW));
 
-        bootSwitch.setChecked(prefs.isStartOnBoot());
-        alwaysSwitch.setChecked(prefs.isAlwaysVisible());
+        bootSwitch.bind(prefs.isStartOnBoot());
+        alwaysSwitch.bind(prefs.isAlwaysVisible());
         alwaysDesc.setText(prefs.isAlwaysVisible() ? R.string.always_on : R.string.always_off);
-        autoSwitch.setChecked(memory.isAutoManage());
-        hideSwitch.setChecked(prefs.isHideFromShade());
-        hideDesc.setText(prefs.isHideFromShade() ? R.string.hide_on : R.string.hide_off);
+        autoSwitch.bind(memory.isAutoManage());
 
         if (!userName.getText().toString().equals(prefs.getUserName())) {
             userName.setText(prefs.getUserName());
@@ -824,8 +1206,7 @@ public class MainActivity extends Activity {
                 MemoryBudget.mb(memory.actualUsageBytes())));
         bindCapacity();
 
-        demoButton.setEnabled(!running);
-        demoButton.setAlpha(running ? 0.45f : 1f);
+        demoState.setTextColor(getColor(running ? R.color.text_faint : R.color.accent));
         demoDesc.setText(running ? R.string.demo_blocked : R.string.demo_desc);
 
         binding = false;
@@ -835,31 +1216,17 @@ public class MainActivity extends Activity {
        SHARED ROW HELPERS
        ═════════════════════════════════════════════════════════════════ */
 
-    private View pickedRow(String label, Drawable icon, Runnable onRemove) {
-        return pickedRow(label, icon, onRemove, null);
-    }
-
     /**
-     * A chosen entry: optional icon, label, and a Remove control. When onTap is
-     * given the row itself does something else (apply a preset) and only the
-     * Remove chip deletes — otherwise tapping anywhere removes, which is what
-     * the app and function lists want.
+     * A saved preset: its name, a Remove control, and a tap that applies it.
+     * Only the Remove chip deletes, because a list you apply from must not
+     * delete an entry when you reach for it.
      */
-    private View pickedRow(String label, Drawable icon, Runnable onRemove, Runnable onTap) {
+    private View pickedRow(String label, Runnable onRemove, Runnable onTap) {
         float d = getResources().getDisplayMetrics().density;
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(0, Math.round(7 * d), 0, Math.round(7 * d));
-
-        if (icon != null) {
-            ImageView iv = new ImageView(this);
-            iv.setImageDrawable(icon);
-            int px = Math.round(28 * d);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(px, px);
-            lp.rightMargin = Math.round(10 * d);
-            row.addView(iv, lp);
-        }
 
         TextView tv = new TextView(this);
         tv.setText(label);
@@ -880,7 +1247,7 @@ public class MainActivity extends Activity {
         rm.setOnClickListener(v -> onRemove.run());
         row.addView(rm);
 
-        row.setOnClickListener(v -> { if (onTap != null) onTap.run(); else onRemove.run(); });
+        row.setOnClickListener(v -> onTap.run());
         return row;
     }
 
@@ -893,25 +1260,17 @@ public class MainActivity extends Activity {
         return pkg;
     }
 
-    private Drawable appIcon(String pkg) {
-        try { return getPackageManager().getApplicationIcon(pkg); }
-        catch (Exception e) { return null; }
-    }
-
-    private void wirePermissionRow(View row, int nameRes, int whyRes, View.OnClickListener onGrant) {
-        ((TextView) row.findViewById(R.id.perm_name)).setText(nameRes);
-        ((TextView) row.findViewById(R.id.perm_why)).setText(whyRes);
-        row.findViewById(R.id.perm_action).setOnClickListener(onGrant);
-    }
-
-    private void setPermissionState(View row, boolean granted) {
-        ImageView tick = row.findViewById(R.id.perm_tick);
-        TextView action = row.findViewById(R.id.perm_action);
-        tick.setImageResource(granted ? R.drawable.ic_check : R.drawable.ic_chevron);
-        tick.setColorFilter(getColor(granted ? R.color.green : R.color.text_faint));
-        action.setText(granted ? R.string.granted : R.string.grant);
-        action.setAlpha(granted ? 0.5f : 1f);
-        action.setEnabled(!granted);
+    /**
+     * "Grant" in the accent, or "Granted" in green and no longer a target.
+     * A granted permission that still looks tappable invites a trip to a
+     * Settings screen with nothing left to do on it.
+     */
+    private void setPermissionState(TextView state, boolean granted) {
+        state.setText(granted ? R.string.granted : R.string.grant);
+        state.setTextColor(getColor(granted ? R.color.green : R.color.accent));
+        View row = (View) state.getParent();
+        row.setClickable(!granted);
+        row.setAlpha(granted ? 0.72f : 1f);
     }
 
     private boolean hasPostNotifications() {
@@ -926,9 +1285,7 @@ public class MainActivity extends Activity {
 
     private void enableTheme() {
         if (!DcpApp.canDrawOverlay(this)) {
-            binding = true;
-            themeSwitch.setChecked(false);
-            binding = false;
+            themeSwitch.bind(false);
             Toast.makeText(this, R.string.perm_overlay_why, Toast.LENGTH_LONG).show();
             startActivity(new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
                     Uri.parse("package:" + getPackageName())));
@@ -957,11 +1314,15 @@ public class MainActivity extends Activity {
 
     @Override
     public void onBackPressed() {
-        // Back steps through the tabs before it leaves, which is what a
-        // three-tab app is expected to do.
-        if (tabBar.getSelected() != TabBar.TAB_CARDS) {
-            tabBar.select(TabBar.TAB_CARDS, true);
-            ((ScrollView) panes[TabBar.TAB_CARDS]).smoothScrollTo(0, 0);
+        // A detail screen closes first, then the tabs step back to the first
+        // one, and only then does back leave the app.
+        if (openScreen != null) {
+            openScreen.dismiss();
+            return;
+        }
+        if (tabBar.getSelected() != FloatingTabBar.TAB_CARDS) {
+            tabBar.select(FloatingTabBar.TAB_CARDS, true);
+            ((ScrollView) panes[FloatingTabBar.TAB_CARDS]).smoothScrollTo(0, 0);
             return;
         }
         super.onBackPressed();

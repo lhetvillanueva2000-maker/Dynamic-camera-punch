@@ -1,5 +1,69 @@
 # Changelog
 
+## v2.7.0 — the control panel, rebuilt
+
+v2.6.0 gave the app three tabs. It did not give it a way of looking at forty
+switches, so the first tab was still one long scroll with all of them on it.
+This release fixes the organisation, not the features.
+
+**The tab bar floats.** A rounded pill above the content instead of a full-width
+bar welded to the bottom edge, with the active icon riding in a coloured circle
+that slides between the three. The circle stretches slightly while it travels
+and settles round, which reads as weight rather than as a circle teleporting.
+Labels are gone — three destinations with distinct shapes do not need them, and
+dropping them buys the height that makes it look like a control rather than a
+toolbar. Lists now run under the pill rather than being cut off by it.
+
+**Categories instead of one scroll.** The Cards tab is now a header, the master
+switch, setup, and four category rows — system events, live cards, gestures,
+notifications — each showing a strip of the icons it contains and opening its
+own screen that slides in from the right with a back arrow and a **Guide**
+button. The top level says what the island can do; only the level below asks for
+decisions.
+
+**Switches say it twice.** Every toggle carries a tick when on and a cross when
+off. Colour alone is the one channel a colour-blind user does not have and a
+bright screen washes out; a mark survives both.
+
+**Icons on every row, drawn rather than loaded.** Around forty of them in one
+class — no resource lookups, no `Drawable` objects held for off-screen rows, and
+nothing allocated per frame. They are tinted by category, never by state, so a
+screen can be scanned by colour while the glyph still says what each row is.
+
+**A new palette.** The old one was near-black with a hard iOS blue: card edges
+vanished into the background and every accent shouted. Cards now sit a clear
+step above the background, and the accent is a periwinkle quiet enough to head
+every section without dominating the page.
+
+**Island and Settings were rebuilt to match**, because leaving them in the old
+card style would have made the app look like two apps stitched together. All
+three tabs are now built from the same six shapes — section header, card, toggle
+row, value row, nav row, note — defined once in `Rows` rather than agreed by
+hand across a dozen layout files. Notification mode, auto-hide delay and "show
+only on the island" moved into the Notifications screen where they belong.
+
+One correctness point worth recording: the content allow-list stores *empty
+means everything*, so the first switch turned off could not simply be removed —
+the list would still be empty and the switch would spring back on. Turning one
+off while the list is empty now writes every other kind in first, which is the
+state the user was already looking at, and only then removes the one they
+touched.
+
+Nothing about the island itself changed: same overlay, same geometry, same
+behaviour on your cutout. Memory is unchanged at 30–45 MB — the rebuild replaced
+roughly forty vector drawables with one class and hand-draws only the pieces
+that actually animate.
+
+Verified: `clean assembleRelease assembleDebug lintDebug` → **zero lint errors**
+and zero unused resources; both APKs signature-verified across API 24–34; still
+exactly six permissions with no `QUERY_ALL_PACKAGES` and no `INTERNET`; every
+`findViewById` audited against the layouts actually inflated, because a stale id
+after a rewrite this size is a null at runtime rather than a compile error; 31
+demo assertions and 9 support-page assertions pass, the latter now committed as
+`tools/test-support.js` and wired into `npm test`. Release 180,643 B, debug
+256,410 B. Still not launched on a device — this environment has no KVM, and
+this release rewrote most of the UI, so the first install is a real test.
+
 ## v2.6.0 — three tabs, and a theme you can actually theme
 
 The control panel was one long scroll that did everything. It is now three panes

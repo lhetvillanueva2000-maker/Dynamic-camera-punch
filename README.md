@@ -4,7 +4,7 @@
 
 # Dynamic Camera Punch
 
-### v2.6.0 — the theme
+### v2.7.0 — the theme
 
 **A Dynamic Island for your Android punch-hole — running over every app on the phone.**
 
@@ -76,19 +76,45 @@ In the demonstration, a drag that starts inside the phone belongs to the phone
 rather than scrolling the page. Swipe up from the bottom, or inward from either
 side edge, to close an open app.
 
-## The app: three tabs
+## The app
 
-The control panel is one screen with three panes and a sliding indicator between
-them. Each pane press dips and lifts, so a tap is acknowledged before the pane
-has finished arriving.
+Three tabs, reached from a **floating pill** above the content rather than a bar
+welded to the bottom edge. The active icon rides in a coloured circle that slides
+between them — and stretches slightly while it travels, so it reads as something
+with weight rather than a circle teleporting. Lists run *under* the pill instead
+of being cut off by it.
 
 | Tab | What lives there |
 |---|---|
-| **Cards** | Everything the island *shows*: the two allow-lists with their **+** pickers, the notification-content switches, "show only on the island", and the gesture assignments. |
-| **Look** | Everything about how it *looks and moves* — with a live preview at the top that loops idle → compact → expanded using your current settings, so a dial's effect is visible before you leave the screen. |
-| **Settings** | Your name, the theme's own switches, the device readout, the support page, and the setup checklist. |
+| **Cards** | What the island shows, and what your gestures do. |
+| **Island** | How it looks and moves, over a live preview, with named presets. |
+| **Settings** | You, the island's own behaviour, this device, and the extras. |
 
-### Look: the dials
+### Categories, not one long scroll
+
+The first screen is short on purpose: a header, the master switch, setup, and
+four category rows — **system events**, **live cards**, **gestures**,
+**notifications**. Each shows a strip of the icons it contains and opens its own
+screen, sliding in from the right with a back arrow and a **Guide** button that
+says what the category is actually for.
+
+The top level answers "what can this thing do". Only the level below it asks you
+to make forty decisions. Before v2.7.0 all forty switches were on one scroll, in
+the order they happened to be written.
+
+### The switches carry a mark
+
+Every toggle shows a **tick when it is on and a cross when it is off**, on a
+thumb that slides between them. Colour alone is the one channel a colour-blind
+user does not have and a bright screen washes out; a mark survives both.
+
+Row badges are tinted by *category*, never by state, so a screenful can be
+scanned by colour while the glyph inside still says what each row is. All ~40
+icons are drawn on a Canvas in a single class rather than loaded as drawables —
+no resource lookups, nothing held for rows that are off screen, and nothing
+allocated per frame.
+
+### Island: the dials
 
 Position (`X`, `Y` offset), compact corner radius, expanded radius and width,
 idle scale, opacity at rest, border width, background and outline colour,
@@ -101,7 +127,7 @@ one is cheap even while the overlay is live and redrawing behind the app.
 
 ### Presets, with your own names
 
-Save the whole Look tab under a name — "Night", "Discreet", "Big and loud" — and
+Save the whole Island tab under a name — "Night", "Discreet", "Big and loud" — and
 switch between them in one tap. A preset stores the settings as JSON, so adding a
 new dial in a later version needs no migration: an unknown key is ignored and a
 missing one falls back to its default. Saving over an existing name replaces it
@@ -250,7 +276,7 @@ system instead of leaving a fattened heap inside the process that hosts the over
 ## Install
 
 ```bash
-adb install -r dist/dcp-v2.6.0-release.apk
+adb install -r dist/dcp-v2.7.0-release.apk
 ```
 
 Every launchable file names its own version, so there is never any doubt about
@@ -258,9 +284,9 @@ which build is in front of you:
 
 | File | What it is | Size |
 |---|---|---|
-| `dcp-v2.6.0-release.apk` | The theme. **Install this.** | 172,023 bytes |
-| `dcp-v2.6.0-debug.apk` | Same app built unoptimised, signed with the Android debug key and installed as `com.dcp.punch.debug` under the name **DCP (debug)**. Only useful if you are attaching a debugger; it sits alongside the release build rather than replacing it. | 238,413 bytes |
-| `web/dynamic-camera-punch-v2.6.0.html` | The demonstration, openable in any browser. | — |
+| `dcp-v2.7.0-release.apk` | The theme. **Install this.** | 180,643 bytes |
+| `dcp-v2.7.0-debug.apk` | Same app built unoptimised, signed with the Android debug key and installed as `com.dcp.punch.debug` under the name **DCP (debug)**. Only useful if you are attaching a debugger; it sits alongside the release build rather than replacing it. | 256,410 bytes |
+| `web/dynamic-camera-punch-v2.7.0.html` | The demonstration, openable in any browser. | — |
 
 ### Check the download before you install it
 
@@ -270,15 +296,15 @@ corrupt. The size column above is the quickest tell — a few KB means you got a
 web page. To be certain:
 
 ```
-sha256  release  9e5a573ced2f4dc4cb729e4aa9d65fbb72c4d415f7a6749648591a01bec9c5cb
-sha256  debug    a8e7aebcbcce7c4765c00f304a95040277933be957997951e7ff906a5ea9efc7
+sha256  release  b39630eaff1a294c39a53bbafaacaf44b3b045e5c42e137776f5f0734581fd56
+sha256  debug    8e74b3b1bbc04ecb40ad21f116431ee49030b3898253544de564304d76018c69
 ```
 
 Both are signed with APK Signature Scheme v2 and verify with `apksigner verify`
 across the whole supported range, API 24 to 34.
 
 The version also appears in the app's own header, and in Android's app info as
-version 2.6.0 (code 9). See [CHANGELOG.md](CHANGELOG.md) for what changed.
+version 2.7.0 (code 10). See [CHANGELOG.md](CHANGELOG.md) for what changed.
 
 Then open the app and work down the setup list:
 
@@ -290,7 +316,7 @@ Then open the app and work down the setup list:
 3. **Show notifications** — Android requires an ongoing notification for a service
    that runs indefinitely. That notice is also how you turn the theme off.
 
-Minimum Android 7.0 (API 24). ~168 KB on disk, ~30–45 MB resident. No network access.
+Minimum Android 7.0 (API 24). ~176 KB on disk, ~30–45 MB resident. No network access.
 
 ## Permissions, and why each one is there
 
@@ -337,7 +363,12 @@ android/app/src/main/java/com/dcp/punch/
     Prefs.java                persisted settings
   ui/
     MainActivity.java         control panel: three panes, cross-faded
-    TabBar.java               the tab bar, its sliding pill and press states
+    Rows.java                 the six shapes every screen is built from
+    Glyphs.java               ~40 icons, drawn rather than loaded
+    IconBadge.java            a glyph in a tinted circle
+    CheckSwitch.java          the switch that carries a tick or a cross
+    FloatingTabBar.java       the floating pill and its sliding selector
+    SubScreen.java            a detail screen, pushed over a tab
     SliderRow.java            one dial: label, value, track, grab halo
     IslandPreview.java        the live idle → compact → expanded loop
     MemoryGaugeView.java      the speedometer, in the app rather than on the edge
@@ -383,6 +414,10 @@ cd android
 
 `syncWebAssets` mirrors `web/` into the APK on every build, so there is never a
 second copy of the demo to keep in sync.
+
+```bash
+npm test                       # 31 demo assertions + 9 support-page assertions
+```
 
 The release build is signed with the throwaway key in `android/keystore/`.
 **Generate your own before distributing anything:**

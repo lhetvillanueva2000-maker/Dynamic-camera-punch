@@ -25,7 +25,6 @@
     <string name="variant_b_desc">Floating, clear of the bezels</string>
 
     <string name="ram_title">Memory</string>
-    <string name="ram_hint">Drag the needle to set the ceiling. The green band inside it is what the app is really using, measured — not the ceiling echoed back.</string>
     <string name="ram_honest">The island needs about 30–45 MB and stays there. The ceiling is a limit, not a target: raising it does not make anything faster, and the app will not grow to fill it. Earlier versions allocated real memory to meet the number on the dial, which was waste — that is gone. The reserve for Android is never touched.</string>
 
     <string name="demo_title">Live demonstration</string>
@@ -49,9 +48,6 @@
     <string name="auto_title">Manage memory automatically</string>
     <string name="auto_desc">Let the app keep its own footprint down and release cached artwork as it goes.</string>
 
-    <string name="sources_title">What the island shows</string>
-    <string name="functions_all">Nothing picked, so everything shows. Tap + to choose only the kinds you want.</string>
-    <string name="functions_some">Only these show. Tap + to add more, or a row to remove it.</string>
 
     <string name="src_messages">Messages</string>
     <string name="src_media">Music and media</string>
@@ -67,7 +63,6 @@
 
     <string name="apps_title">Apps</string>
     <string name="apps_all">No apps picked, so every app shows. Tap + to choose only the apps you want on the island.</string>
-    <string name="apps_some">Only these apps reach the island. Tap + to add more, or a row to remove it.</string>
     <string name="add_plus">+  Add</string>
     <string name="remove">Remove</string>
 
@@ -89,21 +84,14 @@
     <string name="capacity_tight">This ceiling is below what the island itself needs. Raise it on the gauge above.</string>
 
     <string name="hide_title">Show only on the island</string>
-    <string name="hide_on">On — a notification is cleared from the shade once the island has shown it.</string>
-    <string name="hide_off">Off — notifications stay in your notification shade as normal.</string>
-    <string name="hide_warn">Two things to know before you turn this on. The brief banner at the top of the screen still appears: by the time any app is told about a notification the system has already posted it, and there is no way to suppress that. And clearing is the same as swiping it away — the notification is gone, not hidden, so if you miss the island you have missed it. Ongoing notifications are never touched.</string>
 
     <string name="made_by_named">Made by %1$s  (I hate pirating :) )</string>
     <string name="made_by">Made by User (Elijah)  (I hate pirating :) )</string>
     <string name="made_with" translatable="false">HTML5 • CSS3 • vanilla ES6+ • zero dependencies</string>
 
     <!-- ── Tabs ───────────────────────────────────────────────────── -->
-    <string name="tab_cards">Cards</string>
-    <string name="tab_look">Island</string>
-    <string name="tab_settings">Settings</string>
 
     <!-- ── Gestures ───────────────────────────────────────────────── -->
-    <string name="gestures_title">Gestures</string>
     <string name="gestures_desc">What each touch on the island does. Tap a row to change it.</string>
     <string name="g_tap">Single tap</string>
     <string name="g_double_tap">Double tap</string>
@@ -122,12 +110,9 @@
 
     <!-- ── Look ───────────────────────────────────────────────────── -->
     <string name="look_title">Island</string>
-    <string name="look_desc">Size, position, colour and movement. The preview below runs on whatever you set.</string>
     <string name="look_geometry">Size and position</string>
     <string name="look_surface">Surface</string>
     <string name="look_motion">Movement</string>
-    <string name="look_notif">Notifications</string>
-    <string name="look_reset">Reset everything to defaults</string>
 
     <string name="d_offset_x">Horizontal offset</string>
     <string name="d_offset_y">Vertical offset</string>
@@ -159,7 +144,6 @@
     <string name="colour_outline">Outline</string>
 
     <string name="presets_title">Presets</string>
-    <string name="presets_desc">Save everything on this tab under a name, and switch between looks in one tap.</string>
     <string name="presets_hint">Name this look</string>
     <string name="presets_save">Save</string>
     <string name="presets_none">No presets yet. Name one above and tap Save.</string>
@@ -172,8 +156,6 @@
     <string name="name_hint">Your name</string>
 
     <string name="device_title">This device</string>
-    <string name="device_refresh">Refresh</string>
-    <string name="device_note">Storage is what this app can see, which on a device with a memory card or several users is not the whole disk. A live system-wide CPU percentage is not readable by ordinary apps on Android 8 and later, so what is shown is this app\'s own processor time — the honest figure.</string>
     <string name="stat_ram">Memory</string>
     <string name="stat_storage">Storage</string>
     <string name="stat_cpu">Processor</string>
@@ -182,6 +164,68 @@
     <string name="stat_cores">%1$d cores · %2$s · %3$s</string>
 
     <string name="support_title">Support</string>
-    <string name="support_desc">If this is useful to you and you would like to chip in. Opens a page inside the app — there is no internet connection involved, and no payment is taken here.</string>
-    <string name="support_open">Open the support page</string>
+
+    <!-- ── v2.7.0: categories, and the screens behind them ─────────── -->
+    <string name="guide">Guide</string>
+    <string name="tagline_version">%1$s  ·  v%2$s</string>
+    <string name="reset">Reset</string>
+    <string name="refresh">Refresh</string>
+
+    <string name="look_sub">How it looks and how it moves. The preview above uses your current settings.</string>
+    <string name="presets_prompt">Saves every setting on this tab under one name. Saving over a name replaces it.</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="you_title">You</string>
+    <string name="behaviour_title">Island behaviour</string>
+    <string name="always_short">Keep the island as a circle around your camera even with nothing to show</string>
+    <string name="cpu_honest">The CPU figure is this app\'s own share of wall-clock time, not the system\'s. A live system-wide CPU percentage has not been readable by an ordinary app since /proc/stat was restricted in Android 8 — anything showing you one without root is a system app or is making it up.</string>
+    <string name="extras_title">More</string>
+    <string name="support_desc_short">A page inside the app. No internet connection is involved.</string>
+    <string name="about_title">About</string>
+    <string name="about_desc">Version %1$s</string>
+    <string name="about_body">Dynamic Camera Punch is a system overlay that turns your punch-hole camera into a live island.\n\nIt contains no third-party libraries at all — no AndroidX, no Kotlin runtime, nothing. Every control in this app is drawn on a Canvas, which is why the whole thing fits in a couple of hundred kilobytes.\n\nSix permissions, every one used. No QUERY_ALL_PACKAGES. No INTERNET — this app has never made a network request and cannot.\n\nMIT licensed. Not affiliated with or endorsed by Apple.</string>
+
+    <string name="cat_events">System events</string>
+    <string name="guide_events">Short, one-off things your phone does that the island can announce as it happens — plugging in, running low, switching to vibrate, connecting headphones.\n\nThese four need no permission at all. They work on a fresh install with nothing granted beyond the overlay itself, because Android broadcasts them to any app that asks to listen.</string>
+    <string name="events_note">These work with no notification access. They are broadcast by the system, not read from your notifications.</string>
+
+    <string name="cat_cards">Live cards</string>
+    <string name="guide_cards">Things that stay on the island while they are happening, rather than appearing and vanishing — a track playing, a call ringing, a timer counting down, a route step, a download filling up.\n\nAll of these are read from notifications, so they need notification access. Without it the island still works; it just has less to say.</string>
+    <string name="cards_note">Read from your notifications, so these need notification access. Turn one off and it stops reaching the island entirely.</string>
+
+    <string name="cat_gestures">Gestures</string>
+    <string name="guide_gestures">What each touch on the island does. Every gesture can be set to anything, or to nothing.\n\nDouble tap is set to Nothing by default on purpose: with nothing bound to it, a single tap can act the moment you lift your finger. Bind it and every single tap has to wait ~300 ms to find out whether a second one is coming.</string>
+    <string name="gestures_stored_note">Assignments are stored by name, not by position in this list, so a future version adding an action cannot silently change what your gestures do.</string>
+
+    <string name="cat_notifications">Notifications</string>
+    <string name="cat_notifications_desc">Choose which apps reach the island, and how their notifications behave when they get there</string>
+    <string name="guide_notifications">Which apps are allowed to put something on the island, and what happens when they do.\n\nWith no apps picked, every app is allowed — an empty list would otherwise mean an island that never appears, which reads as broken. Add your first app and the list becomes a filter.</string>
+    <string name="notif_settings">Notification settings</string>
+    <string name="notif_mode_title">Notification mode</string>
+    <string name="notif_mode_desc">Whether an arriving notification opens itself or waits to be tapped</string>
+    <string name="auto_hide_desc">How long an alert stays up before it collapses on its own</string>
+    <string name="auto_hide_never">Until opened</string>
+    <string name="auto_hide_seconds">%1$d seconds</string>
+    <string name="hide_short">Clear a notification from the shade once the island has shown it</string>
+    <string name="hide_limits">Two limits worth knowing: the brief banner at the top of the screen still appears, because the system has already posted the notification before any app is told about it — no app can suppress that. And clearing is the same as swiping it away, so the island becomes the only place that notification was ever shown. Ongoing notifications are never touched.</string>
+
+    <!-- Row subtitles: what each kind of content actually is -->
+    <string name="src_messages_desc">The conversation and what was actually said, with the sender\'s avatar</string>
+    <string name="src_media_desc">The track that is playing, with play, pause and skip</string>
+    <string name="src_calls_desc">Who is calling, from the dialer\'s own notification</string>
+    <string name="src_timers_desc">Live countdown from your clock app</string>
+    <string name="src_navigation_desc">Turn-by-turn from your maps app</string>
+    <string name="src_progress_desc">Downloads, installs and anything else reporting progress</string>
+    <string name="src_other_desc">Anything else that posts a notification</string>
+    <string name="src_charging_desc">Bolt and battery level the moment you plug in</string>
+    <string name="src_battery_desc">Level and warning when the battery gets low</string>
+    <string name="src_ringer_desc">Silent, vibrate and ring changes</string>
+    <string name="src_headphones_desc">Connecting and disconnecting</string>
+
+    <!-- Gesture subtitles -->
+    <string name="g_tap_hint">A single touch on the island</string>
+    <string name="g_double_tap_hint">Two touches in quick succession — adds a short delay to every single tap</string>
+    <string name="g_long_press_hint">Press and hold</string>
+    <string name="g_swipe_left_hint">Drag left across the island</string>
+    <string name="g_swipe_right_hint">Drag right across the island</string>
 </resources>

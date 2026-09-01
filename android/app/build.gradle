@@ -7,8 +7,8 @@ plugins {
 // Single source of truth for the version. Feeds versionName, the APK file
 // names, and the string BuildConfig hands to the control panel — so what is on
 // screen, what is in Settings and what is on disk can never disagree.
-def appVersion = '2.6.0'
-def appVersionCode = 9
+def appVersion = '2.7.0'
+def appVersionCode = 10
 
 /*
  * The web app in ../../web is the single source of truth; this task mirrors it
@@ -35,7 +35,7 @@ abstract class SyncWebAssets extends DefaultTask {
 
     @TaskAction
     void copyWeb() {
-        def dest = outputDir.dir('web')     // → file:///android_asset/web/dynamic-camera-punch-v2.6.0.html
+        def dest = outputDir.dir('web')     // → file:///android_asset/web/dynamic-camera-punch-v2.7.0.html
         fileOps.sync {
             from webRoot
             into dest
@@ -67,7 +67,7 @@ android {
         buildConfig true
     }
 
-    // Produces dcp-v2.6.0-release.apk / dcp-v2.6.0-debug.apk instead of the
+    // Produces dcp-v2.7.0-release.apk / dcp-v2.7.0-debug.apk instead of the
     // default app-release.apk, so a downloaded file names its own version.
     base {
         archivesName = "dcp-v${appVersion}"

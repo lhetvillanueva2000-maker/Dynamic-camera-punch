@@ -25,7 +25,7 @@ const FFMPEG = process.env.FFMPEG ||
     ? '/opt/pw-browsers/ffmpeg-1011/ffmpeg-linux'
     : 'ffmpeg');
 
-const DEMO_PAGE = 'dynamic-camera-punch-v2.6.0.html';
+const DEMO_PAGE = 'dynamic-camera-punch-v2.7.0.html';
 const FPS = 12;
 const GIF_WIDTH = 380;
 
