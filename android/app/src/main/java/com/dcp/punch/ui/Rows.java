@@ -3,6 +3,7 @@ package com.dcp.punch.ui;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RippleDrawable;
 import android.util.TypedValue;
@@ -258,6 +259,48 @@ public final class Rows {
     public LinearLayout plain(ViewGroup card, int glyph, int tint,
                               CharSequence title, CharSequence subtitle) {
         return baseRow(card, glyph, tint, title, subtitle);
+    }
+
+    /**
+     * A row badged with a real image — an installed app's own launcher icon
+     * rather than one of our glyphs.
+     *
+     * An app list badged with a generic squares glyph tells you nothing: the
+     * whole point of listing apps is recognising them, and people recognise
+     * icons faster than package names.
+     */
+    public TextView appValue(ViewGroup card, Drawable icon,
+                             CharSequence title, CharSequence subtitle,
+                             CharSequence value, Runnable onClick) {
+        LinearLayout row = baseRow(card, -1, PLAIN, title, subtitle);
+
+        IconBadge badge = new IconBadge(ctx);
+        if (icon != null) {
+            badge.setImage(icon, Color.TRANSPARENT);
+        } else {
+            // No icon available — an app uninstalled since it was added, say.
+            badge.set(Glyphs.APPS, tintFill[PLAIN], tintIcon[PLAIN]);
+        }
+        badge.size(44f);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.rightMargin = px(14);
+        row.addView(badge, 0, lp);
+        row.setPadding(px(14), px(13), px(16), px(13));
+
+        TextView v = new TextView(ctx);
+        v.setText(value);
+        v.setTextColor(dimColour);
+        v.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
+        v.setGravity(Gravity.END);
+        v.setPadding(px(12), 0, 0, 0);
+        row.addView(v);
+
+        if (onClick != null) {
+            row.setBackground(ripple(0));
+            row.setOnClickListener(x -> onClick.run());
+        }
+        return v;
     }
 
     /* ── Pieces ──────────────────────────────────────────────────────── */

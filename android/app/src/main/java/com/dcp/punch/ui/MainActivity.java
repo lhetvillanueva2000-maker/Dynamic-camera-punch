@@ -462,7 +462,7 @@ public class MainActivity extends Activity {
                         for (String pkg : sources.allowedApps()) {
                             final String p = pkg;
                             LinearLayout card = r.card(body);
-                            r.value(card, Glyphs.APPS, Rows.PLAIN, appLabel(p), p,
+                            r.appValue(card, appIcon(p), appLabel(p), p,
                                     getString(R.string.remove), () -> {
                                         sources.removeApp(p);
                                         DcpApp.get().store().clear();
@@ -1249,6 +1249,15 @@ public class MainActivity extends Activity {
 
         row.setOnClickListener(v -> onTap.run());
         return row;
+    }
+
+    /**
+     * The app's own launcher icon, or null if it is gone. Null is a real case:
+     * an allow-list can outlive an uninstall, and the row still has to draw.
+     */
+    private Drawable appIcon(String pkg) {
+        try { return getPackageManager().getApplicationIcon(pkg); }
+        catch (Exception e) { return null; }
     }
 
     private String appLabel(String pkg) {

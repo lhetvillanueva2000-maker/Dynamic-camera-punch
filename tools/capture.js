@@ -25,7 +25,10 @@ const FFMPEG = process.env.FFMPEG ||
     ? '/opt/pw-browsers/ffmpeg-1011/ffmpeg-linux'
     : 'ffmpeg');
 
-const DEMO_PAGE = 'dynamic-camera-punch-v2.7.0.html';
+// Found rather than named — see the note in test-demo.js.
+const DEMO_PAGE = require('fs')
+        .readdirSync(require('path').join(__dirname, '..', 'web'))
+        .find(f => f.endsWith('.html'));
 const FPS = 12;
 const GIF_WIDTH = 380;
 

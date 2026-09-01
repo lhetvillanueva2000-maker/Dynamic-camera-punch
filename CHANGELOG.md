@@ -1,5 +1,31 @@
 # Changelog
 
+## v2.7.1 — two bugs from the rebuild
+
+**The demonstration opened to a black screen.** The demo page carries the
+version in its filename and `DemoActivity` named that file directly, so when
+2.7.0 renamed it the loader was still asking for the 2.6.0 one: `ERR_FILE_NOT_FOUND`
+behind an empty WebView. The page is now found rather than named — the activity
+lists its own `web` assets and opens what it finds — so a rename cannot break it
+again, and a genuinely missing page says so instead of showing black.
+
+The same latent bug was in `tools/test-demo.js` and `tools/capture.js`, which
+both pointed at the file by name. A test naming a file that no longer exists is
+worse than no test, so both discover it now too.
+
+**The app list showed a placeholder instead of app icons.** Apps on the
+Notifications list were badged with the generic squares glyph, which identifies
+nothing — the point of listing apps is recognising them, and people recognise
+icons faster than package names. `IconBadge` now takes a real `Drawable` and the
+rows pass the app's own launcher icon, drawn through its bounds rather than
+rasterised into a bitmap, so a list of them costs nothing beyond the drawables
+the package manager already returned. An app uninstalled since it was added
+falls back to the placeholder rather than leaving a gap.
+
+Both were reported from a device, which is the only place either could have been
+caught: the first needs the APK's asset tree at runtime, and the second needs
+real installed apps.
+
 ## v2.7.0 — the control panel, rebuilt
 
 v2.6.0 gave the app three tabs. It did not give it a way of looking at forty

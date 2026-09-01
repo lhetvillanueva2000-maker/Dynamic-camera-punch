@@ -4,7 +4,7 @@
 
 # Dynamic Camera Punch
 
-### v2.7.0 — the theme
+### v2.7.1 — the theme
 
 **A Dynamic Island for your Android punch-hole — running over every app on the phone.**
 
@@ -276,7 +276,7 @@ system instead of leaving a fattened heap inside the process that hosts the over
 ## Install
 
 ```bash
-adb install -r dist/dcp-v2.7.0-release.apk
+adb install -r dist/dcp-v2.7.1-release.apk
 ```
 
 Every launchable file names its own version, so there is never any doubt about
@@ -284,9 +284,9 @@ which build is in front of you:
 
 | File | What it is | Size |
 |---|---|---|
-| `dcp-v2.7.0-release.apk` | The theme. **Install this.** | 180,643 bytes |
-| `dcp-v2.7.0-debug.apk` | Same app built unoptimised, signed with the Android debug key and installed as `com.dcp.punch.debug` under the name **DCP (debug)**. Only useful if you are attaching a debugger; it sits alongside the release build rather than replacing it. | 256,410 bytes |
-| `web/dynamic-camera-punch-v2.7.0.html` | The demonstration, openable in any browser. | — |
+| `dcp-v2.7.1-release.apk` | The theme. **Install this.** | 181,455 bytes |
+| `dcp-v2.7.1-debug.apk` | Same app built unoptimised, signed with the Android debug key and installed as `com.dcp.punch.debug` under the name **DCP (debug)**. Only useful if you are attaching a debugger; it sits alongside the release build rather than replacing it. | 257,642 bytes |
+| `web/dynamic-camera-punch-v2.7.1.html` | The demonstration, openable in any browser. | — |
 
 ### Check the download before you install it
 
@@ -296,15 +296,15 @@ corrupt. The size column above is the quickest tell — a few KB means you got a
 web page. To be certain:
 
 ```
-sha256  release  b39630eaff1a294c39a53bbafaacaf44b3b045e5c42e137776f5f0734581fd56
-sha256  debug    8e74b3b1bbc04ecb40ad21f116431ee49030b3898253544de564304d76018c69
+sha256  release  c64dbd7ca86a757f24ac563613d1347498e4709987f9d3cb626fd7e8013a5eb1
+sha256  debug    091650ec3a1b4e495ce91fb0e2198c19be2152cd65d8a9c683695861896869e8
 ```
 
 Both are signed with APK Signature Scheme v2 and verify with `apksigner verify`
 across the whole supported range, API 24 to 34.
 
 The version also appears in the app's own header, and in Android's app info as
-version 2.7.0 (code 10). See [CHANGELOG.md](CHANGELOG.md) for what changed.
+version 2.7.1 (code 11). See [CHANGELOG.md](CHANGELOG.md) for what changed.
 
 Then open the app and work down the setup list:
 
@@ -316,7 +316,7 @@ Then open the app and work down the setup list:
 3. **Show notifications** — Android requires an ongoing notification for a service
    that runs indefinitely. That notice is also how you turn the theme off.
 
-Minimum Android 7.0 (API 24). ~176 KB on disk, ~30–45 MB resident. No network access.
+Minimum Android 7.0 (API 24). ~177 KB on disk, ~30–45 MB resident. No network access.
 
 ## Permissions, and why each one is there
 

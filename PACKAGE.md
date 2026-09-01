@@ -6,16 +6,16 @@ Two things ship here: the **APK** and everything that produces it.
 
 | File | Size | Notes |
 |---|---|---|
-| `dist/dcp-v2.7.0-release.apk` | 180,643 B | Minified, resource-shrunk, signed with the project key. Install this one. |
-| `dist/dcp-v2.7.0-debug.apk` | 256,410 B | Unoptimised and debug-signed. `applicationId` is suffixed `.debug` and the custom permission is named after it, so it genuinely installs alongside the release build instead of colliding with it. Labelled **DCP (debug)** on the launcher. |
+| `dist/dcp-v2.7.1-release.apk` | 181,455 B | Minified, resource-shrunk, signed with the project key. Install this one. |
+| `dist/dcp-v2.7.1-debug.apk` | 257,642 B | Unoptimised and debug-signed. `applicationId` is suffixed `.debug` and the custom permission is named after it, so it genuinely installs alongside the release build instead of colliding with it. Labelled **DCP (debug)** on the launcher. |
 
 ```
-sha256  release  b39630eaff1a294c39a53bbafaacaf44b3b045e5c42e137776f5f0734581fd56
-sha256  debug    8e74b3b1bbc04ecb40ad21f116431ee49030b3898253544de564304d76018c69
+sha256  release  c64dbd7ca86a757f24ac563613d1347498e4709987f9d3cb626fd7e8013a5eb1
+sha256  debug    091650ec3a1b4e495ce91fb0e2198c19be2152cd65d8a9c683695861896869e8
 ```
 
 ```bash
-adb install -r dist/dcp-v2.7.0-release.apk
+adb install -r dist/dcp-v2.7.1-release.apk
 ```
 
 Package `com.dcp.punch` · minSdk 24 (Android 7.0) · targetSdk 34 · no network access.
@@ -31,7 +31,7 @@ produced from a source file in this package:
 
 | Inside the APK | Comes from |
 |---|---|
-| `assets/web/**` — the live demonstration: `dynamic-camera-punch-v2.7.0.html`, 4 CSS files, 6 JS files, `logo.svg` | `web/` — copied in verbatim by the `syncWebAssets` Gradle task |
+| `assets/web/**` — the live demonstration: `dynamic-camera-punch-v2.7.1.html`, 4 CSS files, 6 JS files, `logo.svg` | `web/` — copied in verbatim by the `syncWebAssets` Gradle task |
 | `assets/support/index.html` — the offline support page, opened from the Settings tab. Makes no network requests of any kind. | `android/app/src/main/assets/support/` |
 | `classes.dex` — the overlay service, the Canvas-drawn island, the three-tab control panel, the memory gauge, the notification/media readers | `android/app/src/main/java/com/dcp/punch/**` (29 classes across `data/`, `overlay/`, `mem/`, `ui/`) |
 | `AndroidManifest.xml` (binary) | `android/app/src/main/AndroidManifest.xml` |
@@ -42,13 +42,13 @@ The APK carries **no libraries at all** — no AndroidX, no Kotlin runtime, no
 third-party code. The island is framework `View` + `Canvas` drawing, and so are
 the floating tab bar, the switches, every icon, the sliders, the gauge and the live preview — which is why a
 system-wide overlay, a three-tab control panel, a support page and a full web
-demo fit in 176 KB.
+demo fit in 177 KB.
 
 Verify any of this yourself:
 
 ```bash
-unzip -l dist/dcp-v2.7.0-release.apk
-apksigner verify --print-certs dist/dcp-v2.7.0-release.apk
+unzip -l dist/dcp-v2.7.1-release.apk
+apksigner verify --print-certs dist/dcp-v2.7.1-release.apk
 ```
 
 ## The sources

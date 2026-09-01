@@ -19,7 +19,13 @@ const fs = require('fs');
 const { chromium } = require('playwright');
 
 const ROOT = path.resolve(__dirname, '..');
-const PAGE = 'file://' + path.join(ROOT, 'web', 'dynamic-camera-punch-v2.7.0.html');
+// Found rather than named. The page carries the version in its filename, so
+// naming it here goes stale on every release — and a test that silently points
+// at a file that no longer exists is worse than no test.
+const DEMO_FILE = fs.readdirSync(path.join(ROOT, 'web'))
+        .find(f => f.endsWith('.html'));
+if (!DEMO_FILE) throw new Error('no .html page found in web/');
+const PAGE = 'file://' + path.join(ROOT, 'web', DEMO_FILE);
 
 let fails = 0;
 const ok = (m) => console.log('  ✓ ' + m);

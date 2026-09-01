@@ -10,6 +10,7 @@ import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
@@ -20,6 +21,8 @@ import android.webkit.WebViewClient;
 
 import com.dcp.punch.BuildConfig;
 import com.dcp.punch.overlay.IslandService;
+
+import java.io.IOException;
 
 /**
  * The live demonstration: a WebView sandbox over the bundled web/ folder.
@@ -41,7 +44,7 @@ import com.dcp.punch.overlay.IslandService;
  */
 public class DemoActivity extends Activity {
 
-    private static final String START_URL = "file:///android_asset/web/dynamic-camera-punch-v2.6.0.html";
+    private static final String ASSET_DIR = "web";
     private static final String ASSET_PREFIX = "file:///android_asset/";
 
     private WebView web;
@@ -114,9 +117,52 @@ public class DemoActivity extends Activity {
         if (savedInstanceState != null) {
             web.restoreState(savedInstanceState);
         } else {
-            web.loadUrl(START_URL);
+            String start = findDemoPage();
+            if (start != null) {
+                web.loadUrl(start);
+            } else {
+                // Never leave a black screen. If the page is genuinely missing
+                // the build is broken, and saying so beats a WebView showing
+                // nothing at all.
+                web.loadDataWithBaseURL(null, MISSING_PAGE, "text/html", "utf-8", null);
+            }
         }
     }
+
+    /**
+     * Find the demo's entry page by asking the asset manager, rather than
+     * naming it.
+     *
+     * The file carries the version in its name, so a hard-coded constant here
+     * goes stale on the next release — which is exactly what happened in 2.7.0:
+     * the asset became …-v2.7.0.html, this class still asked for …-v2.6.0.html,
+     * and the demo opened to a black screen with ERR_FILE_NOT_FOUND behind it.
+     * Listing the directory cannot drift, because there is only ever one page
+     * in it and the build copies it there.
+     */
+    private String findDemoPage() {
+        try {
+            String[] files = getAssets().list(ASSET_DIR);
+            if (files != null) {
+                for (String f : files) {
+                    if (f.endsWith(".html")) return ASSET_PREFIX + ASSET_DIR + "/" + f;
+                }
+            }
+        } catch (IOException e) {
+            Log.w(TAG, "Could not list " + ASSET_DIR + " assets", e);
+        }
+        return null;
+    }
+
+    private static final String TAG = "DcpDemo";
+
+    private static final String MISSING_PAGE =
+            "<html><body style='background:#101117;color:#f2f3f7;"
+            + "font:15px system-ui,sans-serif;padding:32px;line-height:1.5'>"
+            + "<h2 style='font-weight:600'>The demonstration is missing</h2>"
+            + "<p style='color:#a9adb8'>No page was found in the app's "
+            + "<code>web</code> assets. The build did not bundle it.</p>"
+            + "</body></html>";
 
     /**
      * Full-bleed layout. `shortEdges` is the important one: without it Android
