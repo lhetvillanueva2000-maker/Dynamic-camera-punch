@@ -76,6 +76,19 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # The notes file in the repository is the source of truth for the release
+      # body, so a correction to it reaches a release that is already published
+      # instead of being stranded in the repo. Assets are never touched here —
+      # a published binary is not something to quietly replace.
+      - name: Refresh the notes on a release that already exists
+        if: steps.files.outputs.ready == 'true' && steps.existing.outputs.exists == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v='${{ steps.v.outputs.version }}'
+          gh release edit "v$v" --notes-file ".github/release-notes/v$v.md"
+          echo "Notes for v$v refreshed from the repository."
+
       - name: Publish the release
         if: steps.files.outputs.ready == 'true' && steps.existing.outputs.exists == 'false'
         env:
