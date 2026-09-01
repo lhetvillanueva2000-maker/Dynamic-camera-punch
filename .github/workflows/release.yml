@@ -1,0 +1,94 @@
+name: Release
+
+# Publishes the APKs already committed under dist/ as a GitHub Release.
+#
+# This exists because a release has to be cut from inside the repository: a
+# token that can push a branch is not necessarily allowed to create a tag, and
+# the Releases API is not reachable from every environment this project is
+# worked on from. The runner's own GITHUB_TOKEN can do both, so the repository
+# publishes itself.
+#
+# The version is read from android/app/build.gradle, which is the single source
+# of truth for it — so this file never has to be edited to ship a new version,
+# and it can never disagree with what is actually inside the APK.
+
+on:
+  push:
+    branches:
+      - "claude/**"
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read the version out of the build file
+        id: v
+        run: |
+          version=$(sed -n "s/^def appVersion = '\(.*\)'/\1/p" android/app/build.gradle)
+          if [ -z "$version" ]; then
+            echo "::error::Could not read appVersion from android/app/build.gradle"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Version is $version"
+
+      - name: Check the APKs and the notes are actually here
+        id: files
+        run: |
+          v='${{ steps.v.outputs.version }}'
+          rel="dist/dcp-v$v-release.apk"
+          dbg="dist/dcp-v$v-debug.apk"
+          notes=".github/release-notes/v$v.md"
+          missing=0
+          for f in "$rel" "$dbg" "$notes"; do
+            if [ ! -f "$f" ]; then echo "missing: $f"; missing=1; fi
+          done
+          if [ "$missing" = 1 ]; then
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Nothing to release for v$v — no APKs or notes committed for it."
+            exit 0
+          fi
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+          ls -l "$rel" "$dbg"
+          sha256sum "$rel" "$dbg"
+
+      # Re-running this workflow must not fail or overwrite a published release,
+      # so an existing tag is a reason to stop rather than an error.
+      - name: Has this version already been released?
+        id: existing
+        if: steps.files.outputs.ready == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "v${{ steps.v.outputs.version }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::v${{ steps.v.outputs.version }} is already released — nothing to do."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish the release
+        if: steps.files.outputs.ready == 'true' && steps.existing.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v='${{ steps.v.outputs.version }}'
+          gh release create "v$v" \
+            "dist/dcp-v$v-release.apk" \
+            "dist/dcp-v$v-debug.apk" \
+            --target "${{ github.sha }}" \
+            --title "v$v — Dynamic Camera Punch" \
+            --notes-file ".github/release-notes/v$v.md" \
+            --latest
+          echo "Released v$v at ${{ github.sha }}"
+          gh release view "v$v" --json tagName,name,assets \
+            --jq '.tagName, .name, (.assets[] | "\(.name)  \(.size) bytes")'
