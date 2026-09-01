@@ -196,12 +196,16 @@ public class IslandPreview extends View {
 
         int bg = look.get(Appearance.BG_COLOR);
         boolean idle = state == IDLE && (morph == null || !morph.isRunning());
-        // The collapsed-opacity dial only applies at rest; a pill showing
-        // content is always solid or it would be unreadable.
-        float alpha = idle ? Math.max(look.collapsedAlpha(), 0.06f) : 1f;
+        // Two different opacities, multiplied. The resting dial only applies at
+        // rest, so a pill showing content does not fade out from under its own
+        // text; the background dial applies in every state, which is the point
+        // of it. The floor keeps the idle circle from vanishing entirely in the
+        // preview — on the real overlay disappearing is the intent, but a
+        // preview that shows nothing teaches nothing.
+        float alpha = (idle ? Math.max(look.collapsedAlpha(), 0.06f) : 1f) * look.bgOpacity();
 
         body.setColor(bg);
-        body.setAlpha((int) (255 * alpha));
+        body.setAlpha((int) (255 * Math.max(0f, Math.min(1f, alpha))));
         float sh = look.shadowAlpha();
         if (sh > 0.02f) {
             body.setShadowLayer(13 * d, 0, 5 * d,

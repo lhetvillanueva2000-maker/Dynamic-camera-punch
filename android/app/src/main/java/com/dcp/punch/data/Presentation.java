@@ -46,6 +46,15 @@ public class Presentation {
     /** 0..1, or negative for "no progress to show". */
     public float progress = -1f;
 
+    /**
+     * Track position and length, in milliseconds, or -1 when this is not a
+     * timed medium. Kept apart from {@link #durationMs}, which is how long an
+     * *alert* stays up — two different clocks that would be a nasty bug to
+     * conflate.
+     */
+    public long trackPositionMs = -1L;
+    public long trackDurationMs = -1L;
+
     /** Alerts only: how long before the island hands the screen back. */
     public long durationMs = 3000L;
 
@@ -68,6 +77,16 @@ public class Presentation {
         public final String label;
         public final int iconRes;       // one of R.drawable.ic_*
         public final Runnable run;
+
+        /**
+         * False when the source says this control is unavailable right now —
+         * the first track of a queue has nothing to go back to.
+         *
+         * It is drawn dimmed rather than omitted. Dropping it would leave two
+         * buttons where there are normally three, which shifts the whole row
+         * and reads as a bug; a greyed control reads as "not right now".
+         */
+        public boolean enabled = true;
 
         public Action(String label, int iconRes, Runnable run) {
             this.label = label;

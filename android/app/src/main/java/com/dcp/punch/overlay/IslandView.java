@@ -148,7 +148,7 @@ public class IslandView extends View {
         this.holdRunnable = () -> {
             if (moved) return;
             held = true;
-            performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+            haptic(android.view.HapticFeedbackConstants.LONG_PRESS);
             run(gestures.actionFor(Gestures.Gesture.LONG_PRESS));
         };
 
@@ -160,6 +160,9 @@ public class IslandView extends View {
         // hardware layers handle it since API 28, and below that it degrades to
         // a hard edge rather than failing.
         track.setColor(0x2EFFFFFF);
+        waveStroke.setStyle(Paint.Style.STROKE);
+        waveStroke.setStrokeCap(Paint.Cap.ROUND);
+        waveStroke.setStrokeJoin(Paint.Join.ROUND);
         lensRing.setStyle(Paint.Style.STROKE);
         lensRing.setStrokeWidth(1.5f * d);
 
@@ -191,13 +194,29 @@ public class IslandView extends View {
     }
 
     private void applySurface() {
-        body.setColor(look.get(Appearance.BG_COLOR));
+        // Background opacity multiplies whatever alpha the chosen colour already
+        // carries, rather than replacing it, so a deliberately translucent
+        // custom colour is not silently forced back to solid by a dial that is
+        // sitting at 100.
+        int bg = look.get(Appearance.BG_COLOR);
+        int baseAlpha = (bg >>> 24) == 0 ? 255 : (bg >>> 24);
+        int alpha = Math.round(baseAlpha * look.bgOpacity());
+        body.setColor((bg & 0x00FFFFFF) | (Math.max(0, Math.min(255, alpha)) << 24));
+
         float sh = look.shadowAlpha();
         if (sh > 0.02f) {
             body.setShadowLayer(14 * d, 0, 6 * d, ((int) (255 * sh)) << 24);
         } else {
             body.clearShadowLayer();
         }
+        // Text scale is applied here rather than at each draw so the paints are
+        // measured at their final size — ellipsizing against a paint that is
+        // about to be resized is how labels end up cut a character short.
+        float ts = look.textScale();
+        compactText.setTextSize(12.5f * d * ts);
+        titleText.setTextSize(15f * d * ts);
+        subText.setTextSize(12.5f * d * ts);
+
         int bw = look.get(Appearance.BORDER_WIDTH);
         lensRing.setStrokeWidth(1.5f * d);
         outlineWidth = bw * d;
@@ -290,11 +309,21 @@ public class IslandView extends View {
         return Math.min(compactText.measureText(p.compactText), 150 * d);
     }
 
+    /**
+     * Must mirror drawExpanded exactly. Every dial that changes a row's height
+     * has to be read here too — a header that grew and a box that did not is
+     * how content gets clipped, and it is invisible until someone opens the one
+     * card that overflows.
+     */
     private float expandedHeight(Presentation p, float w) {
         float h = EXP_PAD_TOP * d;
-        h += 52 * d;                                        // header block
-        if (p.progress >= 0) h += 13 * d + 4 * d;           // gap + bar
-        if (p.actions.length > 0) h += 13 * d + 42 * d;     // gap + buttons
+        h += Math.max(28 * d, look.get(Appearance.ART_SIZE) * d + 14 * d);   // header block
+        if (p.progress >= 0 && look.flag(Appearance.SHOW_PROGRESS)) {
+            h += 13 * d + 8 * d;                                             // gap + bar row
+        }
+        if (p.actions.length > 0) {
+            h += 13 * d + look.get(Appearance.BUTTON_SIZE) * d;              // gap + buttons
+        }
         h += EXP_PAD_BOTTOM * d;
         return h;
     }
@@ -614,7 +643,8 @@ public class IslandView extends View {
         float y = box.top + EXP_PAD_TOP * d;
 
         // Header: art / icon, then two lines of text.
-        float artSize = 52 * d;
+        float artSize = Math.max(28 * d, look.get(Appearance.ART_SIZE) * d + 14 * d);
+        float artRadius = look.get(Appearance.ART_RADIUS) * d;
 
         /* Centre the content block on the island's own axis.
            The art and the text are measured as one unit and that unit is
@@ -629,12 +659,12 @@ public class IslandView extends View {
         float left = box.centerX() - blockW / 2f;
         float right = left + blockW;
         if (p.art != null) {
-            drawArt(canvas, p.art, left, y, artSize, 13 * d, alpha);
+            drawArt(canvas, p.art, left, y, artSize, artRadius, alpha);
         } else {
             chip.setColor(withAlpha(p.accent, alpha));
             r1.set(left, y, left + artSize, y + artSize);
             canvas.drawRoundRect(r1, 13 * d, 13 * d, chip);
-            drawIcon(canvas, p, left + artSize / 2f, y + artSize / 2f, 13 * d, Color.WHITE, alpha);
+            drawIcon(canvas, p, left + artSize / 2f, y + artSize / 2f, artRadius, Color.WHITE, alpha);
         }
 
         float textL = left + artSize + 12 * d;
@@ -664,36 +694,133 @@ public class IslandView extends View {
 
         y += artSize;
 
-        if (p.progress >= 0) {
+        if (p.progress >= 0 && look.flag(Appearance.SHOW_PROGRESS)) {
             y += 13 * d;
-            float h = 4 * d;
-            r1.set(left, y, right, y + h);
-            track.setAlpha(alpha / 4);
-            canvas.drawRoundRect(r1, h / 2f, h / 2f, track);
-            chip.setColor(withAlpha(p.accent == 0 ? Color.WHITE : p.accent, alpha));
-            r1.set(left, y, left + (right - left) * p.progress, y + h);
-            canvas.drawRoundRect(r1, h / 2f, h / 2f, chip);
-            y += h;
+
+            float barL = left, barR = right;
+            boolean times = look.flag(Appearance.SHOW_TIMES) && p.trackDurationMs > 0;
+
+            // Elapsed on the left, remaining on the right as a negative — the
+            // convention every music player uses, and the reason the remaining
+            // side is the more useful of the two.
+            if (times) {
+                compactText.setAlpha((int) (alpha * 0.6f));
+                String elapsed = clock(p.trackPositionMs);
+                String left2 = "-" + clock(Math.max(0, p.trackDurationMs - p.trackPositionMs));
+                float ew = compactText.measureText(elapsed);
+                float lw = compactText.measureText(left2);
+                float baseline = y + 4 * d - (compactText.descent() + compactText.ascent()) / 2f;
+                canvas.drawText(elapsed, barL, baseline, compactText);
+                canvas.drawText(left2, barR - lw, baseline, compactText);
+                barL += ew + 10 * d;
+                barR -= lw + 10 * d;
+            }
+
+            int fill = withAlpha(p.accent == 0 ? Color.WHITE : p.accent, alpha);
+            if (look.get(Appearance.PROGRESS_STYLE) == 1) {
+                drawWavyProgress(canvas, barL, barR, y + 4 * d, p.progress, fill, alpha);
+            } else {
+                float h = 4 * d;
+                r1.set(barL, y + 2 * d, barR, y + 2 * d + h);
+                track.setAlpha(alpha / 4);
+                canvas.drawRoundRect(r1, h / 2f, h / 2f, track);
+                chip.setColor(fill);
+                r1.set(barL, y + 2 * d, barL + (barR - barL) * p.progress, y + 2 * d + h);
+                canvas.drawRoundRect(r1, h / 2f, h / 2f, chip);
+            }
+            y += 8 * d;
         }
 
         actionRects.clear();
         if (p.actions.length > 0) {
             y += 13 * d;
-            float size = 42 * d;
+            float size = look.get(Appearance.BUTTON_SIZE) * d;
             int n = p.actions.length;
-            float spacing = 26 * d;
+            float spacing = Math.max(12 * d, size * 0.62f);
             float totalW = n * size + (n - 1) * spacing;
+
+            // The row must fit inside the padded span, or the outermost button
+            // is drawn past the window edge and simply is not there — which is
+            // exactly what a missing "previous" looks like. Squeeze the spacing
+            // before letting that happen.
+            float span = right - left;
+            if (totalW > span && n > 1) {
+                spacing = Math.max(6 * d, (span - n * size) / (n - 1));
+                totalW = n * size + (n - 1) * spacing;
+            }
+
             float x = box.centerX() - totalW / 2f;
             for (int i = 0; i < n; i++) {
+                Presentation.Action a = p.actions[i];
                 RectF rect = new RectF(x, y, x + size, y + size);
                 actionRects.add(rect);
-                chip.setColor(withAlpha(0xFFFFFFFF, (int) (alpha * 0.13f)));
+                int aAlpha = a.enabled ? alpha : (int) (alpha * 0.32f);
+                chip.setColor(withAlpha(0xFFFFFFFF, (int) (aAlpha * 0.13f)));
                 canvas.drawOval(rect, chip);
-                drawActionIcon(canvas, p.actions[i], rect, alpha);
+                drawActionIcon(canvas, a, rect, aAlpha);
                 x += size + spacing;
             }
         }
     }
+
+    /**
+     * Buzz, if the user wants buzzing.
+     *
+     * Routed through one place so the switch is honoured everywhere rather than
+     * at whichever call sites happened to remember it.
+     */
+    private void haptic(int constant) {
+        if (look.flag(Appearance.HAPTICS)) performHapticFeedback(constant);
+    }
+
+    /** m:ss, the only format a track position is ever wanted in. */
+    private static String clock(long ms) {
+        long total = Math.max(0, ms) / 1000L;
+        return String.format(java.util.Locale.US, "%d:%02d", total / 60, total % 60);
+    }
+
+    /**
+     * The played part of the bar as a wave, the unplayed part flat.
+     *
+     * Sampled per pixel-ish step rather than as a Path of curves: the amplitude
+     * has to fall to zero right at the playhead so the wave resolves into the
+     * flat line, and that is a property of each sample rather than of a segment.
+     */
+    private void drawWavyProgress(Canvas canvas, float l, float r, float cy,
+                                  float progress, int fill, int alpha) {
+        float w = r - l;
+        if (w <= 0) return;
+        float head = l + w * Math.max(0f, Math.min(1f, progress));
+
+        track.setAlpha(alpha / 4);
+        track.setStrokeWidth(3 * d);
+        track.setStyle(Paint.Style.STROKE);
+        canvas.drawLine(head, cy, r, cy, track);
+        track.setStyle(Paint.Style.FILL);
+
+        wavePath.rewind();
+        float amp = 2.6f * d, len = 13 * d, step = 1.5f * d;
+        boolean started = false;
+        for (float x = l; x <= head; x += step) {
+            // Taper the last few points so the wave meets the flat line instead
+            // of stopping mid-swing.
+            float taper = Math.min(1f, (head - x) / (len * 0.9f));
+            float yy = cy + (float) Math.sin((x - l) / len * Math.PI * 2f) * amp * taper;
+            if (!started) { wavePath.moveTo(x, yy); started = true; }
+            else wavePath.lineTo(x, yy);
+        }
+        if (started) {
+            waveStroke.setColor(fill);
+            waveStroke.setStrokeWidth(3 * d);
+            canvas.drawPath(wavePath, waveStroke);
+        }
+        chip.setColor(fill);
+        canvas.drawCircle(head, cy, 3.2f * d, chip);
+    }
+
+    /** Preallocated, like every other paint here: onDraw runs at 60fps. */
+    private final android.graphics.Path wavePath = new android.graphics.Path();
+    private final Paint waveStroke = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     /**
      * How wide the text column wants to be, so the header can be centred as a
@@ -961,6 +1088,7 @@ public class IslandView extends View {
             case NOTHING:
                 return;
             case EXPAND:
+                haptic(android.view.HapticFeedbackConstants.CONTEXT_CLICK);
                 store.setExpanded(true);
                 return;
             case COLLAPSE:

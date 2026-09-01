@@ -169,6 +169,32 @@
     <string name="guide">Guide</string>
     <string name="tagline_version">%1$s  ·  v%2$s</string>
     <string name="reset">Reset</string>
+
+    <!-- ── v2.8.0: surface, content and media ─────────────────────── -->
+    <string name="blur_off">Off</string>
+    <string name="d_bg_opacity">Background opacity</string>
+    <string name="d_blur">Blur behind</string>
+    <string name="blur_note">Background opacity fades the island\'s surface — at 0 only the content is left, floating. Blur needs Android 12 or later, and the system switches all window blurs off in battery saver and when \"reduce transparency\" is on, so it may have no effect even above 0.</string>
+
+    <string name="look_content">Content</string>
+    <string name="d_text_scale">Text size</string>
+    <string name="d_art_size">Artwork size</string>
+    <string name="d_art_radius">Artwork corners</string>
+    <string name="d_button_size">Button size</string>
+
+    <string name="look_media">Media</string>
+    <string name="d_show_progress">Show the progress bar</string>
+    <string name="d_show_progress_desc">The played position of a track, under the title</string>
+    <string name="d_show_times">Show elapsed and remaining</string>
+    <string name="d_show_times_desc">1:16 on the left, -2:16 on the right</string>
+    <string name="d_progress_style">Progress style</string>
+    <string name="d_progress_style_desc">How the played part of the bar is drawn</string>
+    <string name="progress_plain">Plain bar</string>
+    <string name="progress_wavy">Wave</string>
+
+    <string name="look_feel">Feel</string>
+    <string name="d_haptics">Haptics</string>
+    <string name="d_haptics_desc">A short buzz when the island opens or is held</string>
     <string name="refresh">Refresh</string>
 
     <string name="look_sub">How it looks and how it moves. The preview above uses your current settings.</string>

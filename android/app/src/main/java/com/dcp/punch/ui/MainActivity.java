@@ -473,6 +473,21 @@ public class MainActivity extends Activity {
                 }), this::openNotificationsScreen);
     }
 
+    private void pickProgressStyle(TextView label) {
+        CharSequence[] names = {
+                getString(R.string.progress_plain), getString(R.string.progress_wavy)
+        };
+        new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_Alert)
+                .setTitle(R.string.d_progress_style)
+                .setSingleChoiceItems(names, look.get(Appearance.PROGRESS_STYLE), (dialog, which) -> {
+                    look.set(Appearance.PROGRESS_STYLE, which);
+                    label.setText(names[which]);
+                    afterLookChange();
+                    dialog.dismiss();
+                })
+                .show();
+    }
+
     private String autoHideLabel(int seconds) {
         return seconds <= 0 ? getString(R.string.auto_hide_never)
                             : getString(R.string.auto_hide_seconds, seconds);
@@ -674,6 +689,8 @@ public class MainActivity extends Activity {
 
         rows.section(lookBody, getString(R.string.look_surface));
         LinearLayout surface = rows.card(lookBody);
+        addDial(surface, Appearance.BG_OPACITY, R.string.d_bg_opacity);
+        addDial(surface, Appearance.BLUR, R.string.d_blur);
         addDial(surface, Appearance.COLLAPSED_ALPHA, R.string.d_collapsed_alpha);
         addDial(surface, Appearance.BORDER_WIDTH, R.string.d_border_width);
         addDial(surface, Appearance.SHADOW_ALPHA, R.string.d_shadow_alpha);
@@ -706,6 +723,47 @@ public class MainActivity extends Activity {
                     if (binding) return;
                     look.setFlag(Appearance.GLOW, c);
                     afterLookChange();
+                });
+
+        rows.caption(lookBody, getString(R.string.blur_note));
+
+        rows.section(lookBody, getString(R.string.look_content));
+        LinearLayout content = rows.card(lookBody);
+        addDial(content, Appearance.TEXT_SCALE, R.string.d_text_scale);
+        addDial(content, Appearance.ART_SIZE, R.string.d_art_size);
+        addDial(content, Appearance.ART_RADIUS, R.string.d_art_radius);
+        addDial(content, Appearance.BUTTON_SIZE, R.string.d_button_size);
+
+        rows.section(lookBody, getString(R.string.look_media));
+        LinearLayout mediaCard = rows.card(lookBody);
+        rows.toggle(mediaCard, Glyphs.PROGRESS, Rows.PINK,
+                getString(R.string.d_show_progress), getString(R.string.d_show_progress_desc),
+                look.flag(Appearance.SHOW_PROGRESS), (v, c) -> {
+                    if (binding) return;
+                    look.setFlag(Appearance.SHOW_PROGRESS, c);
+                    afterLookChange();
+                });
+        rows.toggle(mediaCard, Glyphs.TIMER, Rows.PINK,
+                getString(R.string.d_show_times), getString(R.string.d_show_times_desc),
+                look.flag(Appearance.SHOW_TIMES), (v, c) -> {
+                    if (binding) return;
+                    look.setFlag(Appearance.SHOW_TIMES, c);
+                    afterLookChange();
+                });
+        final TextView[] style = new TextView[1];
+        style[0] = rows.value(mediaCard, Glyphs.BOUNCE, Rows.PINK,
+                getString(R.string.d_progress_style), getString(R.string.d_progress_style_desc),
+                getString(look.get(Appearance.PROGRESS_STYLE) == 1
+                        ? R.string.progress_wavy : R.string.progress_plain),
+                () -> pickProgressStyle(style[0]));
+
+        rows.section(lookBody, getString(R.string.look_feel));
+        LinearLayout feel = rows.card(lookBody);
+        rows.toggle(feel, Glyphs.VIBRATE, Rows.BLUE,
+                getString(R.string.d_haptics), getString(R.string.d_haptics_desc),
+                look.flag(Appearance.HAPTICS), (v, c) -> {
+                    if (binding) return;
+                    look.setFlag(Appearance.HAPTICS, c);
                 });
 
         rows.section(lookBody, getString(R.string.presets_title), getString(R.string.presets_save),
@@ -805,7 +863,15 @@ public class MainActivity extends Activity {
             case Appearance.IDLE_SCALE:
             case Appearance.COLLAPSED_ALPHA:
             case Appearance.SHADOW_ALPHA:
+            case Appearance.BG_OPACITY:
+            case Appearance.TEXT_SCALE:
                 return v + "%";
+            case Appearance.BLUR:
+                return v == 0 ? getString(R.string.blur_off) : v + " dp";
+            case Appearance.ART_SIZE:
+            case Appearance.ART_RADIUS:
+            case Appearance.BUTTON_SIZE:
+                return v + " dp";
             case Appearance.ANIM_SPEED:
                 return String.format(java.util.Locale.US, "%.2fx", v / 100.0);
             case Appearance.BOUNCE:

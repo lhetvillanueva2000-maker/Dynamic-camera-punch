@@ -48,6 +48,19 @@ public final class Appearance {
     public static final String NOTIF_MODE = "notifMode";       // 0 minimised, 1 expanded
     public static final String AUTO_HIDE = "autoHide";         // seconds, 1..30, 0 = until opened
 
+    /* ── v2.8.0: surface, media layout and feel ──────────────────────── */
+    public static final String BG_OPACITY = "bgOpacity";       // %, 0..100 — the whole surface
+    public static final String BLUR = "blur";                  // dp, 0..80 — blur behind, API 31+
+    public static final String HAPTICS = "haptics";            // 0/1
+    public static final String ART_SIZE = "artSize";           // dp, 28..56
+    public static final String ART_RADIUS = "artRadius";       // dp, 0..28
+    public static final String SHOW_PROGRESS = "showProgress"; // 0/1
+    public static final String PROGRESS_STYLE = "progressStyle";// 0 plain, 1 wavy
+    public static final String SHOW_TIMES = "showTimes";       // 0/1 — elapsed and -remaining
+    public static final String BUTTON_SIZE = "buttonSize";     // dp, 32..56
+    public static final String TEXT_SCALE = "textScale";       // %, 80..130
+    public static final String MEDIA_HEADER_BUTTONS = "mediaHeaderButtons"; // 0/1
+
     /** Default for every key above. Anything absent here is not a setting. */
     private static final Map<String, Integer> DEFAULTS = new LinkedHashMap<>();
     static {
@@ -68,6 +81,18 @@ public final class Appearance {
         DEFAULTS.put(GLOW, 1);
         DEFAULTS.put(NOTIF_MODE, 0);
         DEFAULTS.put(AUTO_HIDE, 5);
+
+        DEFAULTS.put(BG_OPACITY, 100);
+        DEFAULTS.put(BLUR, 0);
+        DEFAULTS.put(HAPTICS, 1);
+        DEFAULTS.put(ART_SIZE, 38);
+        DEFAULTS.put(ART_RADIUS, 10);
+        DEFAULTS.put(SHOW_PROGRESS, 1);
+        DEFAULTS.put(PROGRESS_STYLE, 0);
+        DEFAULTS.put(SHOW_TIMES, 1);
+        DEFAULTS.put(BUTTON_SIZE, 42);
+        DEFAULTS.put(TEXT_SCALE, 100);
+        DEFAULTS.put(MEDIA_HEADER_BUTTONS, 0);
     }
 
     /** Inclusive slider bounds, for the UI to build itself from. */
@@ -85,6 +110,14 @@ public final class Appearance {
         RANGES.put(ANIM_SPEED, new int[]{50, 200});
         RANGES.put(BOUNCE, new int[]{0, 3});
         RANGES.put(AUTO_HIDE, new int[]{0, 30});
+
+        RANGES.put(BG_OPACITY, new int[]{0, 100});
+        RANGES.put(BLUR, new int[]{0, 80});
+        RANGES.put(ART_SIZE, new int[]{28, 56});
+        RANGES.put(ART_RADIUS, new int[]{0, 28});
+        RANGES.put(PROGRESS_STYLE, new int[]{0, 1});
+        RANGES.put(BUTTON_SIZE, new int[]{32, 56});
+        RANGES.put(TEXT_SCALE, new int[]{80, 130});
     }
 
     private static Appearance instance;
@@ -159,6 +192,18 @@ public final class Appearance {
     }
 
     public float collapsedAlpha() { return get(COLLAPSED_ALPHA) / 100f; }
+
+    /**
+     * How opaque the island's surface is, 0..1.
+     *
+     * This is the whole background, in every state — distinct from
+     * {@link #COLLAPSED_ALPHA}, which fades only the idle circle so it can hide
+     * against the cutout. At 0 the surface is gone and only the content is
+     * left floating, which is a real thing people want over a busy wallpaper.
+     */
+    public float bgOpacity() { return get(BG_OPACITY) / 100f; }
+
+    public float textScale() { return get(TEXT_SCALE) / 100f; }
     public float shadowAlpha() { return get(SHADOW_ALPHA) / 100f; }
     public float idleScale() { return get(IDLE_SCALE) / 100f; }
 

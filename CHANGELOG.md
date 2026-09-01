@@ -1,5 +1,47 @@
 # Changelog
 
+## v2.8.0 — a see-through island, and a transport row that stays put
+
+**Background opacity, 0 to 100**, in the Island tab under Surface. At 100 the
+island is solid; at 0 the surface is gone and only the content is left floating.
+It multiplies whatever alpha the chosen background colour already carries rather
+than replacing it, so a deliberately translucent custom colour is not silently
+forced back to solid by a dial sitting at 100.
+
+**Blur behind**, 0–80 dp, same card. A translucent panel over a busy wallpaper
+is unreadable and a blurred one is not. It needs API 31, and the platform can
+refuse it — battery saver and the "reduce transparency" accessibility setting
+both switch window blurs off globally. The service asks
+`isCrossWindowBlurEnabled()` and simply does not set the flag when the answer is
+no, which is the correct fallback rather than something to work around.
+
+**Nine more dials**: text size, artwork size, artwork corner radius, transport
+button size, show-progress, show-times, progress style (plain or wave), haptics.
+All of them save into presets like everything else.
+
+**The transport row is always three buttons.** A session declares which
+transports it supports, and building the row from that declaration is the
+obvious thing to do — until the first track of a queue drops "previous", the row
+becomes two buttons and everything shifts sideways. That is the reported "the
+back button is missing". A control row that changes shape reads as broken rather
+than as unavailable, so the row is now fixed at previous / play-pause / next and
+the declared actions only decide what is drawn dimmed. A session that declares
+nothing at all — plenty never populate the field — is treated as supporting
+everything, because greying out a control that would have worked is the worse
+mistake.
+
+Two related fixes found while looking at that row. It is squeezed rather than
+allowed to overflow the padded span, so an outermost button can never be laid
+out past the window edge and simply not be there. And `expandedHeight` now reads
+the same dials `drawExpanded` does — a header that grew while the box did not is
+how content gets clipped, and it stays invisible until someone opens the one
+card that overflows.
+
+**Progress shows the clock**: elapsed on the left, remaining on the right as a
+negative, the convention every player uses. The wave style draws the played side
+as a sine that tapers to zero at the playhead so it resolves into the flat line
+rather than stopping mid-swing.
+
 ## v2.7.1 — two bugs from the rebuild
 
 **The demonstration opened to a black screen.** The demo page carries the

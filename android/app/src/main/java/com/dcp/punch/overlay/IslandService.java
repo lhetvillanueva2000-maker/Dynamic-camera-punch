@@ -324,8 +324,33 @@ public class IslandService extends Service implements IslandStore.Listener {
             islandLp.dimAmount = 0f;
         }
         islandLp.flags = flags;
+        applyBlur(islandLp);
         applyOffsets();
         try { wm.updateViewLayout(island, islandLp); } catch (Exception ignored) { }
+    }
+
+    /**
+     * Blur whatever is behind the island.
+     *
+     * This is the only way to get real translucency: an alpha-blended surface
+     * over a busy wallpaper is unreadable, while a blurred one is not. It needs
+     * API 31, and even there the platform can refuse it — battery saver and the
+     * "reduce transparency" accessibility setting both switch window blurs off
+     * globally, and `isCrossWindowBlurEnabled()` is how the system says so.
+     * When it is off the flag is simply not set and the surface stays flat,
+     * which is the correct fallback rather than something to work around.
+     */
+    private void applyBlur(WindowManager.LayoutParams lp) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return;
+        float d = getResources().getDisplayMetrics().density;
+        int radius = Math.round(Appearance.get(this).get(Appearance.BLUR) * d);
+        if (radius > 0 && wm.isCrossWindowBlurEnabled()) {
+            lp.flags |= WindowManager.LayoutParams.FLAG_BLUR_BEHIND;
+            lp.setBlurBehindRadius(radius);
+        } else {
+            lp.flags &= ~WindowManager.LayoutParams.FLAG_BLUR_BEHIND;
+            lp.setBlurBehindRadius(0);
+        }
     }
 
     /** Tapping the island opens whatever posted it. */

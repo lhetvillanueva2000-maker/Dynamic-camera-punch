@@ -4,7 +4,7 @@
 
 # Dynamic Camera Punch
 
-### v2.7.1 — the theme
+### v2.8.0 — the theme
 
 **A Dynamic Island for your Android punch-hole — running over every app on the phone.**
 
@@ -116,14 +116,50 @@ allocated per frame.
 
 ### Island: the dials
 
-Position (`X`, `Y` offset), compact corner radius, expanded radius and width,
-idle scale, opacity at rest, border width, background and outline colour,
-shadow strength, animation speed, bounce, a reduce-animation switch, the glow,
-whether an arriving notification lands minimised or already expanded, and how
-long an alert stays up before it collapses itself.
+**Size and position** — `X` and `Y` offset, resting size, compact corner radius,
+expanded radius and width.
+
+**Surface** — **background opacity (0–100)**, **blur behind (0–80 dp)**, opacity
+at rest, border width, background and outline colour, shadow strength.
+
+**Content** — text size (80–130%), artwork size, artwork corner radius,
+transport button size.
+
+**Media** — show the progress bar, show elapsed and remaining, and a progress
+style: plain bar or **wave**.
+
+**Movement** — animation speed, bounce, reduce-animation, the glow.
+
+**Feel** — haptics on open and hold.
 
 Each dial commits on release rather than on every pixel of the drag, so dragging
 one is cheap even while the overlay is live and redrawing behind the app.
+
+#### Translucency
+
+Background opacity fades the island's whole surface, in every state — at 0 the
+panel is gone and only the content is left floating. It *multiplies* whatever
+alpha your background colour already carries rather than replacing it, so a
+deliberately translucent custom colour is not forced back to solid by a dial
+sitting at 100.
+
+Blur is what makes translucency readable: an alpha-blended panel over a busy
+wallpaper is not. It needs **Android 12 or later**, and the platform switches all
+window blurs off in battery saver and when "reduce transparency" is on. The app
+asks the system whether blurs are enabled and draws flat when they are not — the
+card says so, rather than leaving you wondering why a slider does nothing.
+
+### The transport row is always three buttons
+
+A media session declares which transports it supports, and building the row from
+that declaration is the obvious thing to do — until the first track of a queue
+drops "previous", the row becomes two buttons, and everything shifts sideways.
+A control row that changes shape reads as broken rather than as unavailable.
+
+So the row is fixed at previous / play-pause / next, and the declared actions
+only decide what is drawn **dimmed**. A session that declares nothing at all —
+plenty never populate the field — is treated as supporting everything, because
+greying out a control that would have worked is the worse mistake.
 
 ### Presets, with your own names
 
@@ -276,7 +312,7 @@ system instead of leaving a fattened heap inside the process that hosts the over
 ## Install
 
 ```bash
-adb install -r dist/dcp-v2.7.1-release.apk
+adb install -r dist/dcp-v2.8.0-release.apk
 ```
 
 Every launchable file names its own version, so there is never any doubt about
@@ -284,9 +320,9 @@ which build is in front of you:
 
 | File | What it is | Size |
 |---|---|---|
-| `dcp-v2.7.1-release.apk` | The theme. **Install this.** | 181,455 bytes |
-| `dcp-v2.7.1-debug.apk` | Same app built unoptimised, signed with the Android debug key and installed as `com.dcp.punch.debug` under the name **DCP (debug)**. Only useful if you are attaching a debugger; it sits alongside the release build rather than replacing it. | 257,642 bytes |
-| `web/dynamic-camera-punch-v2.7.1.html` | The demonstration, openable in any browser. | — |
+| `dcp-v2.8.0-release.apk` | The theme. **Install this.** | 185,307 bytes |
+| `dcp-v2.8.0-debug.apk` | Same app built unoptimised, signed with the Android debug key and installed as `com.dcp.punch.debug` under the name **DCP (debug)**. Only useful if you are attaching a debugger; it sits alongside the release build rather than replacing it. | 263,686 bytes |
+| `web/dynamic-camera-punch-v2.8.0.html` | The demonstration, openable in any browser. | — |
 
 ### Check the download before you install it
 
@@ -296,15 +332,15 @@ corrupt. The size column above is the quickest tell — a few KB means you got a
 web page. To be certain:
 
 ```
-sha256  release  c64dbd7ca86a757f24ac563613d1347498e4709987f9d3cb626fd7e8013a5eb1
-sha256  debug    091650ec3a1b4e495ce91fb0e2198c19be2152cd65d8a9c683695861896869e8
+sha256  release  013ebe01c86d598d684cfd4fa90e6aeec9d619c65bf653f7120f31971c4bc4b6
+sha256  debug    31c6556c6f2f6c534891dbcf8181304efb9b64d201466ec50e780241e90ef790
 ```
 
 Both are signed with APK Signature Scheme v2 and verify with `apksigner verify`
 across the whole supported range, API 24 to 34.
 
 The version also appears in the app's own header, and in Android's app info as
-version 2.7.1 (code 11). See [CHANGELOG.md](CHANGELOG.md) for what changed.
+version 2.8.0 (code 12). See [CHANGELOG.md](CHANGELOG.md) for what changed.
 
 Then open the app and work down the setup list:
 
@@ -316,7 +352,7 @@ Then open the app and work down the setup list:
 3. **Show notifications** — Android requires an ongoing notification for a service
    that runs indefinitely. That notice is also how you turn the theme off.
 
-Minimum Android 7.0 (API 24). ~177 KB on disk, ~30–45 MB resident. No network access.
+Minimum Android 7.0 (API 24). ~181 KB on disk, ~30–45 MB resident. No network access.
 
 ## Permissions, and why each one is there
 

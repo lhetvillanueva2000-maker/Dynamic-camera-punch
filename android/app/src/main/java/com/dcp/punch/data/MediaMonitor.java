@@ -136,6 +136,8 @@ public class MediaMonitor {
                             - st.getLastPositionUpdateTime()) * st.getPlaybackSpeed());
                 }
                 p.progress = Math.max(0f, Math.min(1f, pos / (float) dur));
+                p.trackPositionMs = Math.max(0, Math.min(dur, pos));
+                p.trackDurationMs = dur;
             }
         } else {
             p.title = "Playing";
@@ -147,13 +149,37 @@ public class MediaMonitor {
         p.tapAction = new Presentation.Action(playing ? "Pause" : "Play",
                 playing ? R.drawable.ic_pause : R.drawable.ic_play,
                 () -> { if (playing) tc.pause(); else tc.play(); });
-        p.actions = new Presentation.Action[]{
-                new Presentation.Action("Previous", R.drawable.ic_prev, tc::skipToPrevious),
-                p.tapAction,
-                new Presentation.Action("Next", R.drawable.ic_next, tc::skipToNext)
-        };
+        // Always three, always in this order.
+        //
+        // A session declares which transports it supports, and it is tempting to
+        // build the row from that — but then the first track of a queue drops
+        // "previous", the row becomes two buttons, and everything shifts. That
+        // is the "the back button is missing" report: a transport row that
+        // changes shape reads as broken rather than as unavailable. So the row
+        // is fixed and the declared actions only decide what is drawn dimmed.
+        long acts = st == null ? 0L : st.getActions();
+        Presentation.Action prev =
+                new Presentation.Action("Previous", R.drawable.ic_prev, tc::skipToPrevious);
+        Presentation.Action next =
+                new Presentation.Action("Next", R.drawable.ic_next, tc::skipToNext);
+        prev.enabled = supports(acts, PlaybackState.ACTION_SKIP_TO_PREVIOUS);
+        next.enabled = supports(acts, PlaybackState.ACTION_SKIP_TO_NEXT);
+
+        p.actions = new Presentation.Action[]{ prev, p.tapAction, next };
 
         store.present(p);
+    }
+
+    /**
+     * Whether the session declares a transport.
+     *
+     * Sessions that declare nothing at all (actions == 0) are common — plenty
+     * of players never populate the field — so "declared nothing" is treated as
+     * "everything works", not as "nothing works". Greying out a control that
+     * would in fact have worked is the worse failure.
+     */
+    private static boolean supports(long actions, long flag) {
+        return actions == 0L || (actions & flag) != 0L;
     }
 
     private static String str(MediaMetadata md, String key, String fallback) {
